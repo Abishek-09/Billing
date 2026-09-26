@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   ShoppingBag,
+  Tags,
   Boxes,
   Users,
   BarChart3,
@@ -16,6 +17,7 @@ import { NavLink, Link } from 'react-router-dom';
 const ADMIN_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin', end: true },
   { id: 'orders', label: 'Orders', icon: ShoppingBag, path: '/admin/orders' },
+  { id: 'categories', label: 'Categories', icon: Tags, path: '/admin/categories' },
   { id: 'inventory', label: 'Inventory', icon: Boxes, path: '/admin/inventory' },
   { id: 'customers', label: 'Customers', icon: Users, path: '/admin/customers' },
   { id: 'reports', label: 'Reports', icon: BarChart3, path: '/admin/reports' },

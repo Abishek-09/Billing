@@ -6,10 +6,8 @@ import PaymentModal from '../components/PaymentModal';
 import ReceiptModal from '../components/ReceiptModal';
 import {
   ProductsView,
+  CategoriesView,
   OrdersView,
-  CustomersView,
-  InventoryView,
-  ReportsView,
   SettingsView
 } from '../components/OtherViews';
 import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
@@ -61,6 +59,18 @@ export function PosBillingDashboard() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [lastCompletedBill, setLastCompletedBill] = useState(null);
+
+  // Orders Ledger State (synced across POS and Admin)
+  const [ordersList, setOrdersList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sweetbite_pos_orders');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [...ALL_ORDERS_DATA];
+  });
 
   // Add Item to Cart
   const handleAddToCart = (product) => {
@@ -136,6 +146,7 @@ export function PosBillingDashboard() {
     setLastCompletedBill({
       billNumber,
       customerName: selectedCustomer.name,
+      customerPhone: selectedCustomer?.phone && selectedCustomer.phone !== '—' ? selectedCustomer.phone : '',
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -165,6 +176,7 @@ export function PosBillingDashboard() {
     const completed = {
       billNumber: paymentDetails.billNumber,
       customerName: paymentDetails.customerName,
+      customerPhone: paymentDetails.customerPhone,
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -179,30 +191,47 @@ export function PosBillingDashboard() {
       change: paymentDetails.change,
     };
 
-    // Prepend to ALL_ORDERS_DATA so it immediately surfaces on /admin/orders!
+    // Prepend to ALL_ORDERS_DATA and local ordersList so it immediately surfaces on Orders menu!
     const newAdminOrder = {
-      id: `ORD-${Date.now().toString().slice(-4)}`,
-      customer: paymentDetails.customerName,
+      id: paymentDetails.billNumber ? `ORD-${paymentDetails.billNumber.replace('SB-', '')}` : `ORD-${Date.now().toString().slice(-4)}`,
+      billNumber: paymentDetails.billNumber || billNumber,
+      customer: paymentDetails.customerName || 'Walk-in Customer',
+      customerPhone: paymentDetails.customerPhone || '',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
       type: currentOrderMeta?.orderTypeLabel || 'Takeaway',
-      date: new Date().toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }) + ', ' + new Date().toLocaleTimeString('en-IN', {
+      date: `${new Date().getDate()} Sep 2026, ${new Date().toLocaleTimeString('en-IN', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
-      }),
+      })}`,
       items: `${cartItems.length} items`,
       itemsList: cartItems.map((it) => `${it.quantity}x ${it.name}`),
-      totalAmount: totalAmount,
+      detailedItems: cartItems.map((it) => ({ ...it })),
+      subTotal,
+      discountAmount,
+      discountPercent,
+      taxAmount,
+      totalAmount,
       amount: `₹${totalAmount.toLocaleString('en-IN')}`,
-      advancePaid: isPreOrder ? currentOrderMeta.advancePaid : '-',
-      pendingAmount: isPreOrder ? currentOrderMeta.pendingAmount : 0,
-      status: (isPreOrder && currentOrderMeta?.pendingAmount > 0) ? 'Pending Payment' : 'Completed',
+      advancePaid: isPreOrder ? (currentOrderMeta?.advancePaid ?? 0) : totalAmount,
+      pendingAmount: isPreOrder ? (currentOrderMeta?.pendingAmount ?? 0) : 0,
+      paymentMethod: paymentDetails.method || 'CASH',
+      status: (isPreOrder && (currentOrderMeta?.pendingAmount || 0) > 0) ? 'Pending Payment' : 'Completed',
+      kitchenStatus: isPreOrder ? 'Pre-Order Booked' : 'Ready for Packing',
+      isNewToday: true,
+      timestamp: Date.now(),
     };
+
     ALL_ORDERS_DATA.unshift(newAdminOrder);
+
+    // Update POS orders list state (triggers immediate re-render of Orders tab)
+    setOrdersList((prev) => {
+      const updated = [newAdminOrder, ...prev];
+      try {
+        localStorage.setItem('sweetbite_pos_orders', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
 
     setLastCompletedBill(completed);
     setIsReceiptModalOpen(true);
@@ -214,6 +243,61 @@ export function PosBillingDashboard() {
     setDiscountPercent(0);
     setSelectedCustomer(CUSTOMERS[0]);
     setCurrentOrderMeta(null);
+  };
+
+  // Reprint receipt handler from Orders tab
+  const handleReprintReceipt = (order) => {
+    const isPreOrder = order.type === 'Order';
+    setLastCompletedBill({
+      billNumber: order.billNumber || order.id,
+      customerName: order.customer,
+      customerPhone: order.customerPhone || '',
+      items: order.detailedItems || (order.itemsList ? order.itemsList.map((itemStr) => {
+        const match = itemStr.match(/^(\d+)x\s*(.*)$/);
+        const qty = match ? parseInt(match[1], 10) : 1;
+        const name = match ? match[2] : itemStr;
+        return { name, quantity: qty, price: Math.round((order.totalAmount || 500) / (order.itemsList.length || 1)) };
+      }) : []),
+      subTotal: order.subTotal || order.totalAmount,
+      discountAmount: order.discountAmount || 0,
+      discountPercent: order.discountPercent || 0,
+      taxAmount: order.taxAmount || Math.round((order.totalAmount || 0) * 0.05),
+      totalAmount: order.totalAmount,
+      orderType: order.type,
+      advancePaid: order.advancePaid === '-' ? order.totalAmount : Number(order.advancePaid || order.totalAmount),
+      pendingAmount: order.pendingAmount || 0,
+      paymentMethod: order.paymentMethod || 'CASH',
+    });
+    setIsReceiptModalOpen(true);
+  };
+
+  // Balance collection handler from Orders tab
+  const handleCollectOrderBalance = (orderId, method = 'Cash') => {
+    setOrdersList((prev) => {
+      const updated = prev.map((ord) => {
+        if (ord.id === orderId || ord.billNumber === orderId) {
+          return {
+            ...ord,
+            advancePaid: ord.totalAmount,
+            pendingAmount: 0,
+            status: 'Completed',
+            paymentMethod: `${ord.paymentMethod || 'CASH'} + ${method}`,
+          };
+        }
+        return ord;
+      });
+      try {
+        localStorage.setItem('sweetbite_pos_orders', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    const found = ALL_ORDERS_DATA.find((o) => o.id === orderId || o.billNumber === orderId);
+    if (found) {
+      found.advancePaid = found.totalAmount;
+      found.pendingAmount = 0;
+      found.status = 'Completed';
+    }
   };
 
   // Cart total calculation for modal
@@ -263,14 +347,21 @@ export function PosBillingDashboard() {
         </>
       ) : activeTab === 'products' ? (
         <ProductsView onBackToBilling={() => setActiveTab('billing')} />
+      ) : activeTab === 'categories' ? (
+        <CategoriesView
+          onBackToBilling={() => setActiveTab('billing')}
+          onSelectCategory={(catName) => {
+            setSelectedCategory(catName);
+            setActiveTab('billing');
+          }}
+        />
       ) : activeTab === 'orders' ? (
-        <OrdersView onBackToBilling={() => setActiveTab('billing')} />
-      ) : activeTab === 'customers' ? (
-        <CustomersView onBackToBilling={() => setActiveTab('billing')} />
-      ) : activeTab === 'inventory' ? (
-        <InventoryView onBackToBilling={() => setActiveTab('billing')} />
-      ) : activeTab === 'reports' ? (
-        <ReportsView onBackToBilling={() => setActiveTab('billing')} />
+        <OrdersView
+          orders={ordersList}
+          onBackToBilling={() => setActiveTab('billing')}
+          onPrintReceipt={handleReprintReceipt}
+          onCollectBalance={handleCollectOrderBalance}
+        />
       ) : (
         <SettingsView onBackToBilling={() => setActiveTab('billing')} />
       )}
@@ -283,7 +374,8 @@ export function PosBillingDashboard() {
         fullTotalAmount={currentOrderMeta ? currentOrderMeta.totalAmount : currentTotalAmount}
         orderType={currentOrderMeta ? currentOrderMeta.orderTypeLabel : 'Takeaway'}
         pendingAmount={currentOrderMeta ? currentOrderMeta.pendingAmount : 0}
-        customerName={selectedCustomer.name}
+        customerName={selectedCustomer?.name || 'Walk-in Customer'}
+        customerPhone={selectedCustomer?.phone && selectedCustomer.phone !== '—' ? selectedCustomer.phone : ''}
         billNumber={billNumber}
         onPaymentSuccess={handlePaymentSuccess}
       />

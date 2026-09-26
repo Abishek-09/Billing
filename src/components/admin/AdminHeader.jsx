@@ -20,6 +20,10 @@ const ROUTE_TITLES = {
     title: 'Orders',
     subtitle: 'Real-time order management, fulfillments, and transaction ledger',
   },
+  '/admin/categories': {
+    title: 'Categories',
+    subtitle: 'Manage bakery product classifications, tax slabs, and catalog grouping',
+  },
   '/admin/inventory': {
     title: 'Product Inventory',
     subtitle: 'Menu management, live stock counters, and restock alerts',

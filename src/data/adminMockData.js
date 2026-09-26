@@ -171,6 +171,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8942',
     customer: 'Elena Rostova',
+    customerPhone: '+91 98201 11204',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
     type: 'Takeaway',
     date: '26 Sep 2026, 05:42 PM',
@@ -185,6 +186,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8941',
     customer: 'Anita Sharma (VIP)',
+    customerPhone: '+91 98201 44521',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
     type: 'Dine-in',
     date: '26 Sep 2026, 05:15 PM',
@@ -199,6 +201,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8940',
     customer: 'Cafe Bistro Downtown',
+    customerPhone: '+91 98100 55432',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
     type: 'Order',
     date: '26 Sep 2026, 04:50 PM',
@@ -213,6 +216,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8939',
     customer: 'Rahul Verma',
+    customerPhone: '+91 98450 12893',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
     type: 'Takeaway',
     date: '26 Sep 2026, 03:30 PM',
@@ -355,13 +359,24 @@ export const ALL_ORDERS_DATA = [
 export const RECENT_ORDERS_DATA = ALL_ORDERS_DATA;
 
 export const getOrdersByRange = (range) => {
+  let source = ALL_ORDERS_DATA;
+  try {
+    const saved = localStorage.getItem('sweetbite_pos_orders');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        source = parsed;
+      }
+    }
+  } catch (e) {}
+
   if (range === 'Today') {
-    return ALL_ORDERS_DATA.filter((o) => o.date.includes('26 Sep'));
+    return source.filter((o) => o.isNewToday || (o.date && (o.date.includes('26 Sep') || o.date.includes('Today'))));
   }
   if (range === 'Yesterday') {
-    return ALL_ORDERS_DATA.filter((o) => o.date.includes('25 Sep'));
+    return source.filter((o) => o.date && o.date.includes('25 Sep'));
   }
-  return ALL_ORDERS_DATA;
+  return source;
 };
 
 export const ALL_INVENTORY_PRODUCTS = [

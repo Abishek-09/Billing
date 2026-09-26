@@ -79,47 +79,8 @@ export const ProductsView = ({ onBackToBilling }) => (
   </div>
 );
 
-export const OrdersView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Live Bakery Orders &amp; Kitchen Queue</h2>
-        <p className="text-xs text-[#4E3636] mt-1">Monitor real-time baking prep, takeout queues, and delivery fulfillments</p>
-      </div>
-      <button
-        onClick={onBackToBilling}
-        className="px-4 py-2 bg-[#116D6E] text-white rounded-xl text-xs font-semibold hover:bg-[#0e5859] transition-colors"
-      >
-        Go to POS Billing
-      </button>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-      {[
-        { title: 'In Oven / Baking', count: 3, color: 'border-amber-400', items: ['2x Artisan Sourdough', '1x Belgian Truffle Cake'] },
-        { title: 'Ready for Packing', count: 4, color: 'border-blue-400', items: ['12x Valrhona Pain au Chocolat', '4x Iced Latte'] },
-        { title: 'Completed Today', count: 42, color: 'border-emerald-400', items: ['Recent: Bill #SB-1041', 'Anita Sharma - ₹1,280'] },
-      ].map((col, idx) => (
-        <div key={idx} className={`bg-white rounded-2xl p-5 border-t-4 ${col.color} border border-[#4E3636]/15 shadow-soft`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-sm text-[#321E1E]">{col.title}</h3>
-            <span className="px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E] font-bold text-xs">
-              {col.count}
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {col.items.map((item, i) => (
-              <div key={i} className="p-3 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 text-xs">
-                <p className="font-semibold text-[#321E1E]">{item}</p>
-                <span className="text-[10px] text-[#4E3636]">Terminal 01 &bull; Just now</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
+export { OrdersView } from './OrdersView';
+export { CategoriesView } from './CategoriesView';
 
 export const CustomersView = ({ onBackToBilling }) => (
   <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">

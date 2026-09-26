@@ -2,10 +2,8 @@ import React from 'react';
 import {
   Receipt,
   CakeSlice,
+  Tags,
   ShoppingBag,
-  Users,
-  Boxes,
-  BarChart3,
   Settings,
   Sparkles,
 } from 'lucide-react';
@@ -14,10 +12,8 @@ import SidebarIllustration from './SidebarIllustration';
 const NAV_ITEMS = [
   { id: 'billing', label: 'Billing', icon: Receipt },
   { id: 'products', label: 'Products', icon: CakeSlice },
+  { id: 'categories', label: 'Categories', icon: Tags },
   { id: 'orders', label: 'Orders', icon: ShoppingBag },
-  { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'inventory', label: 'Inventory', icon: Boxes },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

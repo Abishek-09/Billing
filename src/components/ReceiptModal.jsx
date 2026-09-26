@@ -13,6 +13,7 @@ export const ReceiptModal = ({
     date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
     time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
     customerName = 'Walk-in Customer',
+    customerPhone = '',
     cashier = 'Chef Marie Laurent',
     items = [],
     subTotal = 0,
@@ -90,6 +91,12 @@ export const ReceiptModal = ({
                 <span>Customer:</span>
                 <span className="font-medium text-[#321E1E]">{customerName}</span>
               </div>
+              {customerPhone && (
+                <div className="flex justify-between">
+                  <span>Mobile:</span>
+                  <span className="font-medium text-[#321E1E]">{customerPhone}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Cashier:</span>
                 <span>{cashier}</span>

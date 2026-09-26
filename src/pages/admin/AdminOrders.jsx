@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   Search,
@@ -29,7 +29,14 @@ export const AdminOrders = () => {
   const [ordersOverride, setOrdersOverride] = useState({});
   const [toastMessage, setToastMessage] = useState('');
   const [exportNotice, setExportNotice] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const itemsPerPage = 6;
+
+  useEffect(() => {
+    const handleStorage = () => setRefreshTrigger((prev) => prev + 1);
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   // Filter tabs: 'All', 'Takeaway', 'Dine-in', 'Orders', 'Pending Payments'
   const FILTER_TABS = ['All', 'Takeaway', 'Dine-in', 'Orders', 'Pending Payments'];
@@ -37,7 +44,7 @@ export const AdminOrders = () => {
   // Base range orders
   const baseRangeOrders = useMemo(() => {
     return getOrdersByRange(selectedDateRange);
-  }, [selectedDateRange]);
+  }, [selectedDateRange, refreshTrigger]);
 
   // Apply overrides if any balance was collected in session
   const rangeOrders = useMemo(() => {
@@ -70,6 +77,7 @@ export const AdminOrders = () => {
         query === '' ||
         order.id.toLowerCase().includes(query) ||
         order.customer.toLowerCase().includes(query) ||
+        (order.customerPhone && order.customerPhone.toLowerCase().includes(query)) ||
         (order.type && order.type.toLowerCase().includes(query));
 
       return matchesTab && matchesSearch;
@@ -295,7 +303,12 @@ export const AdminOrders = () => {
                           alt={order.customer}
                           className="w-7 h-7 rounded-full object-cover border border-[#4E3636]/15"
                         />
-                        <span className="font-semibold">{order.customer}</span>
+                        <div>
+                          <span className="font-semibold block">{order.customer}</span>
+                          {order.customerPhone && (
+                            <span className="text-[10px] text-[#4E3636]/70 block font-mono">{order.customerPhone}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -557,6 +570,9 @@ export const AdminOrders = () => {
                 <div>
                   <span className="text-[#4E3636]">Customer:</span>
                   <p className="font-bold text-[#321E1E] text-sm mt-0.5">{selectedOrder.customer}</p>
+                  {selectedOrder.customerPhone && (
+                    <p className="text-xs text-[#4E3636]/70 font-mono mt-0.5">{selectedOrder.customerPhone}</p>
+                  )}
                 </div>
                 <div className="text-right space-y-1">
                   <span
