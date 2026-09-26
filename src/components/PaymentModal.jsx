@@ -18,6 +18,8 @@ export const PaymentModal = ({
   onClose,
   totalAmount,
   customerName,
+  orderCategory = 'Takeaway',
+  tableNumber = null,
   billNumber,
   onPaymentSuccess,
 }) => {
@@ -58,6 +60,8 @@ export const PaymentModal = ({
         onPaymentSuccess({
           billNumber,
           customerName,
+          orderCategory,
+          tableNumber,
           amount: totalAmount,
           method: method.toUpperCase(),
           tendered,
@@ -83,8 +87,11 @@ export const PaymentModal = ({
               <h3 className="font-serif text-lg font-bold leading-tight">
                 Complete Payment
               </h3>
-              <p className="text-xs text-white/80">
-                Bill {billNumber} &bull; {customerName}
+              <p className="text-xs text-white/80 flex items-center gap-1.5 mt-0.5">
+                <span>Bill {billNumber} &bull; {customerName}</span>
+                <span className="px-1.5 py-0.2 rounded bg-white/20 text-white text-[10px] font-bold">
+                  {orderCategory} {orderCategory === 'Dine In' && tableNumber ? `(${tableNumber})` : ''}
+                </span>
               </p>
             </div>
           </div>

@@ -14,6 +14,9 @@ export const ReceiptModal = ({
     time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
     customerName = 'Walk-in Customer',
     cashier = 'Chef Marie Laurent',
+    orderCategory = 'Takeaway',
+    tableNumber = null,
+    orderSchedule = null,
     items = [],
     subTotal = 0,
     discountAmount = 0,
@@ -82,6 +85,18 @@ export const ReceiptModal = ({
                 <span>Invoice No:</span>
                 <span className="font-bold text-[#321E1E]">{billNumber}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Order Category:</span>
+                <span className="font-bold text-[#116D6E] uppercase tracking-wide">
+                  {orderCategory} {tableNumber && orderCategory === 'Dine In' ? `(${tableNumber})` : ''}
+                </span>
+              </div>
+              {orderCategory === 'Order' && orderSchedule && (
+                <div className="flex justify-between text-amber-700">
+                  <span>Scheduled:</span>
+                  <span className="font-bold">{orderSchedule}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Date &amp; Time:</span>
                 <span>{date}, {time}</span>

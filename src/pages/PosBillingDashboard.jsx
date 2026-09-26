@@ -55,6 +55,11 @@ export function PosBillingDashboard() {
   const [selectedCustomer, setSelectedCustomer] = useState(CUSTOMERS[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
 
+  // 3 Order Categories: Takeaway, Dine In, Order
+  const [orderCategory, setOrderCategory] = useState('Takeaway');
+  const [tableNumber, setTableNumber] = useState('T-1');
+  const [orderSchedule, setOrderSchedule] = useState('Today 6 PM');
+
   // Modals State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -132,6 +137,9 @@ export function PosBillingDashboard() {
     setLastCompletedBill({
       billNumber,
       customerName: selectedCustomer.name,
+      orderCategory,
+      tableNumber: orderCategory === 'Dine In' ? tableNumber : null,
+      orderSchedule: orderCategory === 'Order' ? orderSchedule : null,
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -157,6 +165,9 @@ export function PosBillingDashboard() {
     const completed = {
       billNumber: paymentDetails.billNumber,
       customerName: paymentDetails.customerName,
+      orderCategory,
+      tableNumber: orderCategory === 'Dine In' ? tableNumber : null,
+      orderSchedule: orderCategory === 'Order' ? orderSchedule : null,
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -177,6 +188,7 @@ export function PosBillingDashboard() {
     setCartItems([]);
     setDiscountPercent(0);
     setSelectedCustomer(CUSTOMERS[0]);
+    setOrderCategory('Takeaway');
   };
 
   // Cart total calculation for modal
@@ -220,6 +232,12 @@ export function PosBillingDashboard() {
             onSelectCustomer={setSelectedCustomer}
             discountPercent={discountPercent}
             setDiscountPercent={setDiscountPercent}
+            orderCategory={orderCategory}
+            setOrderCategory={setOrderCategory}
+            tableNumber={tableNumber}
+            setTableNumber={setTableNumber}
+            orderSchedule={orderSchedule}
+            setOrderSchedule={setOrderSchedule}
             onPayNow={handleOpenPayNow}
             onPrintBill={handleOpenPrintBill}
           />
@@ -244,6 +262,8 @@ export function PosBillingDashboard() {
         onClose={() => setIsPaymentModalOpen(false)}
         totalAmount={currentTotalAmount}
         customerName={selectedCustomer.name}
+        orderCategory={orderCategory}
+        tableNumber={tableNumber}
         billNumber={billNumber}
         onPaymentSuccess={handlePaymentSuccess}
       />

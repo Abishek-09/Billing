@@ -171,6 +171,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8942',
     customer: 'Elena Rostova',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 05:42 PM',
     items: '4 items',
@@ -182,6 +183,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8941',
     customer: 'Anita Sharma (VIP)',
+    category: 'Dine In',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 05:15 PM',
     items: '6 items',
@@ -193,6 +195,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8940',
     customer: 'Cafe Bistro Downtown',
+    category: 'Order',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 04:50 PM',
     items: '14 items',
@@ -204,6 +207,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8939',
     customer: 'Rahul Verma',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 03:30 PM',
     items: '2 items',
@@ -215,6 +219,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8938',
     customer: 'Dr. Vikram Seth',
+    category: 'Dine In',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 02:10 PM',
     items: '1 item',
@@ -226,6 +231,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8937',
     customer: 'Pooja Patel',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 01:25 PM',
     items: '3 items',
@@ -237,6 +243,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8936',
     customer: 'Siddharth Rao',
+    category: 'Dine In',
     avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 12:40 PM',
     items: '5 items',
@@ -248,6 +255,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8935',
     customer: 'Meera Nambiar',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80',
     date: '26 Sep 2026, 11:55 AM',
     items: '2 items',
@@ -259,6 +267,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8934',
     customer: 'Devang Joshi',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80',
     date: '25 Sep 2026, 06:15 PM',
     items: '3 items',
@@ -270,6 +279,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8933',
     customer: 'Priyanka Kapoor',
+    category: 'Order',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
     date: '25 Sep 2026, 04:30 PM',
     items: '4 items',
@@ -281,6 +291,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8932',
     customer: 'Arjun Mehta',
+    category: 'Dine In',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
     date: '25 Sep 2026, 02:45 PM',
     items: '2 items',
@@ -292,6 +303,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8931',
     customer: 'Rhea Sengupta',
+    category: 'Takeaway',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
     date: '25 Sep 2026, 01:10 PM',
     items: '5 items',
@@ -303,6 +315,7 @@ export const ALL_ORDERS_DATA = [
   {
     id: 'ORD-8930',
     customer: 'Kavita Das',
+    category: 'Order',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&q=80',
     date: '24 Sep 2026, 05:20 PM',
     items: '3 items',

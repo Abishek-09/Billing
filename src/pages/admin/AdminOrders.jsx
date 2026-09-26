@@ -20,6 +20,7 @@ export const AdminOrders = () => {
   const selectedDateRange = outletContext?.selectedDateRange || 'This Week';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [exportNotice, setExportNotice] = useState(false);
@@ -27,6 +28,7 @@ export const AdminOrders = () => {
 
   // Filter tabs
   const FILTER_TABS = ['All', 'Pending', 'Completed', 'Cancelled'];
+  const CATEGORY_TABS = ['All', 'Takeaway', 'Dine In', 'Order'];
 
   // Base range orders
   const rangeOrders = useMemo(() => {
@@ -38,13 +40,15 @@ export const AdminOrders = () => {
     return rangeOrders.filter((order) => {
       const matchesStatus =
         statusFilter === 'All' || order.status === statusFilter;
+      const matchesCategory =
+        categoryFilter === 'All' || order.category === categoryFilter;
       const matchesSearch =
         searchQuery.trim() === '' ||
         order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.customer.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesCategory && matchesSearch;
     });
-  }, [rangeOrders, searchQuery, statusFilter]);
+  }, [rangeOrders, searchQuery, statusFilter, categoryFilter]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
@@ -136,40 +140,67 @@ export const AdminOrders = () => {
         </div>
       )}
 
-      {/* Filter Tabs: Pills for "All", "Pending", "Completed", "Cancelled".
-          Active tab has #116D6E background and white text. */}
-      <div className="flex items-center gap-2 pt-1">
-        {FILTER_TABS.map((tab) => {
-          const isActive = statusFilter === tab;
-          const count =
-            tab === 'All'
-              ? rangeOrders.length
-              : rangeOrders.filter((o) => o.status === tab).length;
+      {/* Filter Tabs: Status on left, Category on right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        {/* Status Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {FILTER_TABS.map((tab) => {
+            const isActive = statusFilter === tab;
+            const count =
+              tab === 'All'
+                ? rangeOrders.length
+                : rangeOrders.filter((o) => o.status === tab).length;
 
-          return (
-            <button
-              key={tab}
-              onClick={() => {
-                setStatusFilter(tab);
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 ${
-                isActive
-                  ? 'bg-[#116D6E] text-white shadow-teal'
-                  : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/40'
-              }`}
-            >
-              <span>{tab}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-[#FDFBF7] text-[#4E3636]'
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setStatusFilter(tab);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 ${
+                  isActive
+                    ? 'bg-[#116D6E] text-white shadow-teal'
+                    : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/40'
                 }`}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                <span>{tab}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-[#FDFBF7] text-[#4E3636]'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Category Tabs: All, Takeaway, Dine In, Order */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#4E3636]/15 shadow-xs shrink-0">
+          <span className="text-[11px] font-bold text-[#4E3636] px-2">Category:</span>
+          {CATEGORY_TABS.map((cat) => {
+            const isActive = categoryFilter === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => {
+                  setCategoryFilter(cat);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#116D6E] text-white shadow-xs'
+                    : 'text-[#4E3636] hover:text-[#321E1E] hover:bg-[#FDFBF7]'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Data Table: White background, rounded-xl, soft shadow */}
@@ -182,7 +213,10 @@ export const AdminOrders = () => {
                   Order ID
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Customer Name
+                  Customer
+                </th>
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                  Category
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
                   Date &amp; Time
@@ -223,6 +257,21 @@ export const AdminOrders = () => {
                         />
                         <span className="font-semibold">{order.customer}</span>
                       </div>
+                    </td>
+
+                    {/* Order Category */}
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          order.category === 'Dine In'
+                            ? 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20'
+                            : order.category === 'Order'
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20'
+                        }`}
+                      >
+                        {order.category || 'Takeaway'}
+                      </span>
                     </td>
 
                     {/* Date & Time */}
@@ -350,8 +399,13 @@ export const AdminOrders = () => {
             <div className="p-5 space-y-4 text-xs">
               <div className="flex items-center justify-between pb-3 border-b border-[#4E3636]/10">
                 <div>
-                  <span className="text-[#4E3636]">Customer:</span>
-                  <p className="font-bold text-[#321E1E] text-sm mt-0.5">{selectedOrder.customer}</p>
+                  <span className="text-[#4E3636]">Customer &amp; Category:</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="font-bold text-[#321E1E] text-sm">{selectedOrder.customer}</p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E]">
+                      {selectedOrder.category || 'Takeaway'}
+                    </span>
+                  </div>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusBadge(selectedOrder.status)}`}>
                   {selectedOrder.status}
