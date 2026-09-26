@@ -14,9 +14,6 @@ export const ReceiptModal = ({
     time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
     customerName = 'Walk-in Customer',
     cashier = 'Chef Marie Laurent',
-    orderCategory = 'Takeaway',
-    tableNumber = null,
-    orderSchedule = null,
     items = [],
     subTotal = 0,
     discountAmount = 0,
@@ -24,6 +21,10 @@ export const ReceiptModal = ({
     taxAmount = 0,
     totalAmount = 0,
     paymentMethod = 'CASH',
+    billingType = 'Takeaway',
+    tableNumber = null,
+    orderDueTime = null,
+    orderNotes = null,
   } = billData;
 
   const handlePrint = () => {
@@ -86,21 +87,25 @@ export const ReceiptModal = ({
                 <span className="font-bold text-[#321E1E]">{billNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span>Order Category:</span>
-                <span className="font-bold text-[#116D6E] uppercase tracking-wide">
-                  {orderCategory} {tableNumber && orderCategory === 'Dine In' ? `(${tableNumber})` : ''}
-                </span>
-              </div>
-              {orderCategory === 'Order' && orderSchedule && (
-                <div className="flex justify-between text-amber-700">
-                  <span>Scheduled:</span>
-                  <span className="font-bold">{orderSchedule}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
                 <span>Date &amp; Time:</span>
                 <span>{date}, {time}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Billing Type:</span>
+                <span className="font-bold text-[#116D6E]">
+                  {billingType === 'Dine In'
+                    ? `DINE IN (${tableNumber || 'Table 1'})`
+                    : billingType === 'Order'
+                    ? `ORDER (${orderDueTime || 'PRE-BOOK'})`
+                    : 'TAKEAWAY (PARCEL)'}
+                </span>
+              </div>
+              {orderNotes && (
+                <div className="flex justify-between text-[10px] text-[#4E3636]">
+                  <span>Order Note:</span>
+                  <span className="italic max-w-[170px] text-right truncate">{orderNotes}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Customer:</span>
                 <span className="font-medium text-[#321E1E]">{customerName}</span>

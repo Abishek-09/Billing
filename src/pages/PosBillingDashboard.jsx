@@ -55,10 +55,11 @@ export function PosBillingDashboard() {
   const [selectedCustomer, setSelectedCustomer] = useState(CUSTOMERS[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
 
-  // 3 Order Categories: Takeaway, Dine In, Order
-  const [orderCategory, setOrderCategory] = useState('Takeaway');
+  // Billing Type State (3 Categories: Takeaway, Dine In, Order)
+  const [billingType, setBillingType] = useState('Takeaway');
   const [tableNumber, setTableNumber] = useState('T-1');
-  const [orderSchedule, setOrderSchedule] = useState('Today 6 PM');
+  const [orderDueTime, setOrderDueTime] = useState('Today, 06:00 PM');
+  const [orderNotes, setOrderNotes] = useState('');
 
   // Modals State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -114,6 +115,7 @@ export function PosBillingDashboard() {
   const handleClearCart = () => {
     setCartItems([]);
     setDiscountPercent(0);
+    setOrderNotes('');
   };
 
   // Payment Flow
@@ -137,9 +139,6 @@ export function PosBillingDashboard() {
     setLastCompletedBill({
       billNumber,
       customerName: selectedCustomer.name,
-      orderCategory,
-      tableNumber: orderCategory === 'Dine In' ? tableNumber : null,
-      orderSchedule: orderCategory === 'Order' ? orderSchedule : null,
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -147,6 +146,10 @@ export function PosBillingDashboard() {
       taxAmount,
       totalAmount,
       paymentMethod: 'PENDING / PROFORMA',
+      billingType,
+      tableNumber: billingType === 'Dine In' ? tableNumber : null,
+      orderDueTime: billingType === 'Order' ? orderDueTime : null,
+      orderNotes: billingType === 'Order' ? orderNotes : null,
     });
     setIsReceiptModalOpen(true);
   };
@@ -165,9 +168,6 @@ export function PosBillingDashboard() {
     const completed = {
       billNumber: paymentDetails.billNumber,
       customerName: paymentDetails.customerName,
-      orderCategory,
-      tableNumber: orderCategory === 'Dine In' ? tableNumber : null,
-      orderSchedule: orderCategory === 'Order' ? orderSchedule : null,
       items: [...cartItems],
       subTotal,
       discountAmount,
@@ -177,6 +177,10 @@ export function PosBillingDashboard() {
       paymentMethod: paymentDetails.method,
       tendered: paymentDetails.tendered,
       change: paymentDetails.change,
+      billingType,
+      tableNumber: billingType === 'Dine In' ? tableNumber : null,
+      orderDueTime: billingType === 'Order' ? orderDueTime : null,
+      orderNotes: billingType === 'Order' ? orderNotes : null,
     };
 
     setLastCompletedBill(completed);
@@ -188,7 +192,7 @@ export function PosBillingDashboard() {
     setCartItems([]);
     setDiscountPercent(0);
     setSelectedCustomer(CUSTOMERS[0]);
-    setOrderCategory('Takeaway');
+    setOrderNotes('');
   };
 
   // Cart total calculation for modal
@@ -232,12 +236,14 @@ export function PosBillingDashboard() {
             onSelectCustomer={setSelectedCustomer}
             discountPercent={discountPercent}
             setDiscountPercent={setDiscountPercent}
-            orderCategory={orderCategory}
-            setOrderCategory={setOrderCategory}
+            billingType={billingType}
+            onSelectBillingType={setBillingType}
             tableNumber={tableNumber}
-            setTableNumber={setTableNumber}
-            orderSchedule={orderSchedule}
-            setOrderSchedule={setOrderSchedule}
+            onSelectTableNumber={setTableNumber}
+            orderDueTime={orderDueTime}
+            onSetOrderDueTime={setOrderDueTime}
+            orderNotes={orderNotes}
+            onSetOrderNotes={setOrderNotes}
             onPayNow={handleOpenPayNow}
             onPrintBill={handleOpenPrintBill}
           />
@@ -262,9 +268,11 @@ export function PosBillingDashboard() {
         onClose={() => setIsPaymentModalOpen(false)}
         totalAmount={currentTotalAmount}
         customerName={selectedCustomer.name}
-        orderCategory={orderCategory}
-        tableNumber={tableNumber}
         billNumber={billNumber}
+        billingType={billingType}
+        tableNumber={tableNumber}
+        orderDueTime={orderDueTime}
+        orderNotes={orderNotes}
         onPaymentSuccess={handlePaymentSuccess}
       />
 

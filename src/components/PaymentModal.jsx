@@ -18,9 +18,11 @@ export const PaymentModal = ({
   onClose,
   totalAmount,
   customerName,
-  orderCategory = 'Takeaway',
-  tableNumber = null,
   billNumber,
+  billingType = 'Takeaway',
+  tableNumber = 'T-1',
+  orderDueTime = 'Today, 06:00 PM',
+  orderNotes = '',
   onPaymentSuccess,
 }) => {
   const [method, setMethod] = useState('cash'); // 'cash' | 'upi' | 'card' | 'split'
@@ -60,13 +62,15 @@ export const PaymentModal = ({
         onPaymentSuccess({
           billNumber,
           customerName,
-          orderCategory,
-          tableNumber,
           amount: totalAmount,
           method: method.toUpperCase(),
           tendered,
           change: changeDue,
           timestamp: new Date(),
+          billingType,
+          tableNumber: billingType === 'Dine In' ? tableNumber : null,
+          orderDueTime: billingType === 'Order' ? orderDueTime : null,
+          orderNotes: billingType === 'Order' ? orderNotes : null,
         });
         setPaymentDone(false);
         onClose();
@@ -87,12 +91,16 @@ export const PaymentModal = ({
               <h3 className="font-serif text-lg font-bold leading-tight">
                 Complete Payment
               </h3>
-              <p className="text-xs text-white/80 flex items-center gap-1.5 mt-0.5">
+              <div className="flex items-center gap-2 flex-wrap text-xs text-white/80 mt-0.5">
                 <span>Bill {billNumber} &bull; {customerName}</span>
-                <span className="px-1.5 py-0.2 rounded bg-white/20 text-white text-[10px] font-bold">
-                  {orderCategory} {orderCategory === 'Dine In' && tableNumber ? `(${tableNumber})` : ''}
+                <span className="inline-flex items-center px-2 py-0.2 rounded bg-white/20 text-white font-semibold text-[10px]">
+                  {billingType === 'Dine In'
+                    ? `Dine In (${tableNumber})`
+                    : billingType === 'Order'
+                    ? `Order (${orderDueTime})`
+                    : 'Takeaway'}
                 </span>
-              </p>
+              </div>
             </div>
           </div>
           <button
@@ -104,12 +112,17 @@ export const PaymentModal = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           {/* Amount Due Card */}
           <div className="bg-[#FDFBF7] p-4 rounded-xl border border-[#4E3636]/10 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#4E3636]">
-              Total Payable Amount
-            </span>
+            <div>
+              <span className="text-xs font-semibold text-[#4E3636] block">
+                Total Payable Amount
+              </span>
+              <span className="text-[11px] font-medium text-[#116D6E]">
+                Category: {billingType === 'Dine In' ? `Dine In • ${tableNumber}` : billingType === 'Order' ? `Advance Order • ${orderDueTime}` : 'Takeaway Packaging'}
+              </span>
+            </div>
             <span className="text-3xl font-extrabold text-[#CD1818]">
               ₹{totalAmount.toLocaleString('en-IN')}
             </span>

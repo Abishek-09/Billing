@@ -28,12 +28,14 @@ export const BillingCart = ({
   onSelectCustomer,
   discountPercent,
   setDiscountPercent,
-  orderCategory = 'Takeaway',
-  setOrderCategory,
+  billingType = 'Takeaway',
+  onSelectBillingType,
   tableNumber = 'T-1',
-  setTableNumber,
-  orderSchedule = 'Today 6 PM',
-  setOrderSchedule,
+  onSelectTableNumber,
+  orderDueTime = 'Today, 06:00 PM',
+  onSetOrderDueTime,
+  orderNotes = '',
+  onSetOrderNotes,
   onPayNow,
   onPrintBill,
 }) => {
@@ -90,7 +92,7 @@ export const BillingCart = ({
   return (
     <aside className="w-[380px] bg-white h-screen flex flex-col justify-between shrink-0 select-none shadow-[-6px_0_24px_rgba(50,30,30,0.05)] border-l border-[#4E3636]/10 relative z-20">
       {/* 1. Header: "New Bill" (Serif font, #321E1E) & "Clear" button (Text #CD1818, trash icon) */}
-      <div className="p-5 pb-3.5 border-b border-[#4E3636]/10 shrink-0">
+      <div className="p-5 pb-3 border-b border-[#4E3636]/10 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="font-serif text-xl font-bold text-[#321E1E]">
@@ -137,135 +139,20 @@ export const BillingCart = ({
           </div>
         )}
 
-        {/* 2. Order Category Switcher: 3 Categories (Takeaway, Dine In, Order) */}
-        <div className="mt-3.5 space-y-2">
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15">
-            <button
-              type="button"
-              onClick={() => setOrderCategory && setOrderCategory('Takeaway')}
-              className={`py-2 px-1 rounded-lg text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                orderCategory === 'Takeaway'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#4E3636] hover:text-[#321E1E] hover:bg-white/80'
-              }`}
-            >
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>Takeaway</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrderCategory && setOrderCategory('Dine In')}
-              className={`py-2 px-1 rounded-lg text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                orderCategory === 'Dine In'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#4E3636] hover:text-[#321E1E] hover:bg-white/80'
-              }`}
-            >
-              <UtensilsCrossed className="w-3.5 h-3.5" />
-              <span>Dine In</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrderCategory && setOrderCategory('Order')}
-              className={`py-2 px-1 rounded-lg text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                orderCategory === 'Order'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#4E3636] hover:text-[#321E1E] hover:bg-white/80'
-              }`}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Order</span>
-            </button>
-          </div>
-
-          {/* Contextual Sub-Bar for selected Category */}
-          {orderCategory === 'Dine In' && (
-            <div className="p-2 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 flex items-center justify-between animate-in fade-in duration-200">
-              <span className="text-[11px] font-bold text-[#116D6E] flex items-center gap-1">
-                <UtensilsCrossed className="w-3 h-3" />
-                <span>Table:</span>
-              </span>
-              <div className="flex items-center gap-1">
-                {['T-1', 'T-2', 'T-3', 'T-4', 'T-5', 'T-6'].map((tbl) => (
-                  <button
-                    key={tbl}
-                    type="button"
-                    onClick={() => setTableNumber && setTableNumber(tbl)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                      tableNumber === tbl
-                        ? 'bg-[#116D6E] text-white shadow-xs'
-                        : 'bg-white text-[#4E3636] hover:bg-white/80 border border-[#4E3636]/15'
-                    }`}
-                  >
-                    {tbl}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {orderCategory === 'Takeaway' && (
-            <div className="px-2.5 py-1.5 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 flex items-center justify-between text-[11px] font-medium text-[#116D6E] animate-in fade-in duration-200">
-              <span className="flex items-center gap-1.5 font-bold">
-                <ShoppingBag className="w-3 h-3" />
-                <span>Counter Parcel</span>
-              </span>
-              <span className="text-[10px] bg-white px-2 py-0.5 rounded-full border border-[#116D6E]/20 text-[#321E1E] font-bold">
-                Token #{billNumber}
-              </span>
-            </div>
-          )}
-
-          {orderCategory === 'Order' && (
-            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20 space-y-1.5 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold text-[#321E1E] flex items-center gap-1">
-                  <ClipboardList className="w-3 h-3 text-amber-700" />
-                  <span>Advance / Custom Order:</span>
-                </span>
-                <span className="text-[10px] text-amber-900 font-bold bg-white px-2 py-0.5 rounded-md border border-amber-300">
-                  Scheduled
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {['Today 6 PM', 'Tomorrow 10 AM', 'Tomorrow 4 PM'].map((sched) => (
-                  <button
-                    key={sched}
-                    type="button"
-                    onClick={() => setOrderSchedule && setOrderSchedule(sched)}
-                    className={`flex-1 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                      orderSchedule === sched
-                        ? 'bg-amber-700 text-white shadow-xs'
-                        : 'bg-white text-[#4E3636] border border-[#4E3636]/15 hover:bg-amber-50'
-                    }`}
-                  >
-                    {sched}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 3. Customer Info: Dropdown for "Walk-in Customer", Bill No., and Date/Time in #4E3636 */}
-        <div className="mt-3 pt-3 border-t border-[#4E3636]/10 space-y-2">
+        {/* 2. Customer Info: Dropdown for "Walk-in Customer", Bill No., and Date/Time in #4E3636 */}
+        <div className="mt-3 pt-2.5 border-t border-[#4E3636]/10 space-y-2">
           {/* Customer Dropdown */}
           <div className="relative" ref={customerDropdownRef}>
             <button
               type="button"
               onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15 hover:border-[#116D6E] text-left transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-1.5 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15 hover:border-[#116D6E] text-left transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <User className="w-4 h-4 text-[#116D6E] shrink-0" />
                 <div className="truncate">
-                  <div className="text-xs font-bold text-[#321E1E] truncate flex items-center gap-1.5">
-                    <span>{selectedCustomer.name}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#116D6E]/10 text-[#116D6E]">
-                      {orderCategory === 'Dine In' ? `Dine In (${tableNumber})` : orderCategory}
-                    </span>
+                  <div className="text-xs font-bold text-[#321E1E] truncate">
+                    {selectedCustomer.name}
                   </div>
                   {selectedCustomer.phone !== '—' && (
                     <div className="text-[10px] text-[#4E3636]/70 truncate">
@@ -279,9 +166,6 @@ export const BillingCart = ({
 
             {customerDropdownOpen && (
               <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-soft-lg border border-[#4E3636]/15 py-1 z-30 max-h-48 overflow-y-auto">
-                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#4E3636]/60 border-b border-[#4E3636]/10">
-                  Select Customer
-                </div>
                 {CUSTOMERS.map((cust) => (
                   <button
                     key={cust.id}
@@ -324,6 +208,125 @@ export const BillingCart = ({
               <span>{formattedDateTime}</span>
             </div>
           </div>
+        </div>
+
+        {/* 3. Three Categories in Billing Type: Takeaway, Dine In, Order */}
+        <div className="mt-3 pt-2.5 border-t border-[#4E3636]/10">
+          <div className="flex items-center justify-between mb-1.5 px-0.5">
+            <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
+              Billing Type
+            </span>
+            <span className="text-[11px] font-semibold text-[#116D6E]">
+              {billingType === 'Dine In'
+                ? `Table Service (${tableNumber})`
+                : billingType === 'Order'
+                ? 'Pre-Order / Advance'
+                : 'Parcel Packaging'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15">
+            {/* Takeaway */}
+            <button
+              type="button"
+              onClick={() => onSelectBillingType && onSelectBillingType('Takeaway')}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
+                billingType === 'Takeaway'
+                  ? 'bg-[#116D6E] text-white shadow-xs'
+                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+              <span>Takeaway</span>
+            </button>
+
+            {/* Dine In */}
+            <button
+              type="button"
+              onClick={() => onSelectBillingType && onSelectBillingType('Dine In')}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
+                billingType === 'Dine In'
+                  ? 'bg-[#116D6E] text-white shadow-xs'
+                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+              }`}
+            >
+              <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
+              <span>Dine In</span>
+            </button>
+
+            {/* Order */}
+            <button
+              type="button"
+              onClick={() => onSelectBillingType && onSelectBillingType('Order')}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
+                billingType === 'Order'
+                  ? 'bg-[#116D6E] text-white shadow-xs'
+                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+              <span>Order</span>
+            </button>
+          </div>
+
+          {/* Dine In Sub-options: Table selector */}
+          {billingType === 'Dine In' && (
+            <div className="mt-2 p-2 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 text-xs animate-in fade-in duration-150">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
+                  Select Table:
+                </span>
+                <span className="text-[11px] font-bold text-[#116D6E]">
+                  {tableNumber}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
+                {['T-1', 'T-2', 'T-3', 'T-4', 'T-5', 'T-6', 'Counter'].map((tbl) => (
+                  <button
+                    key={tbl}
+                    type="button"
+                    onClick={() => onSelectTableNumber && onSelectTableNumber(tbl)}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer shrink-0 ${
+                      tableNumber === tbl
+                        ? 'bg-[#116D6E] text-white shadow-2xs'
+                        : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]'
+                    }`}
+                  >
+                    {tbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Order Sub-options: Scheduled Pickup / Delivery & Special Baking Notes */}
+          {billingType === 'Order' && (
+            <div className="mt-2 space-y-1.5 p-2 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 text-xs animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
+                  Due Time:
+                </span>
+                <select
+                  value={orderDueTime}
+                  onChange={(e) => onSetOrderDueTime && onSetOrderDueTime(e.target.value)}
+                  className="text-[11px] font-bold bg-white text-[#321E1E] rounded-md px-2 py-0.5 border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E]"
+                >
+                  <option value="Today, 06:00 PM">Today, 06:00 PM</option>
+                  <option value="Today, 08:00 PM">Today, 08:00 PM</option>
+                  <option value="Tomorrow, 10:00 AM">Tomorrow, 10:00 AM</option>
+                  <option value="Tomorrow, 04:00 PM">Tomorrow, 04:00 PM</option>
+                  <option value="Advance Booking">Advance Booking</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                value={orderNotes}
+                onChange={(e) => onSetOrderNotes && onSetOrderNotes(e.target.value)}
+                placeholder="Order notes (e.g. Birthday msg, eggless)..."
+                className="w-full bg-white text-[11px] text-[#321E1E] px-2.5 py-1 rounded-md border border-[#4E3636]/20 placeholder-[#4E3636]/50 focus:outline-none focus:border-[#116D6E]"
+              />
+            </div>
+          )}
         </div>
       </div>
 

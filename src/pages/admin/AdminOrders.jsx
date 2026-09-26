@@ -11,7 +11,10 @@ import {
   X,
   CheckCircle2,
   Clock,
-  AlertCircle
+  AlertCircle,
+  ShoppingBag,
+  UtensilsCrossed,
+  ClipboardList
 } from 'lucide-react';
 import { ALL_ORDERS_DATA, getOrdersByRange } from '../../data/adminMockData';
 
@@ -20,7 +23,7 @@ export const AdminOrders = () => {
   const selectedDateRange = outletContext?.selectedDateRange || 'This Week';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [billingTypeFilter, setBillingTypeFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [exportNotice, setExportNotice] = useState(false);
@@ -28,7 +31,12 @@ export const AdminOrders = () => {
 
   // Filter tabs
   const FILTER_TABS = ['All', 'Pending', 'Completed', 'Cancelled'];
-  const CATEGORY_TABS = ['All', 'Takeaway', 'Dine In', 'Order'];
+  const BILLING_TYPE_TABS = [
+    { label: 'All Categories', value: 'All' },
+    { label: 'Takeaway', value: 'Takeaway', icon: ShoppingBag },
+    { label: 'Dine In', value: 'Dine In', icon: UtensilsCrossed },
+    { label: 'Order', value: 'Order', icon: ClipboardList },
+  ];
 
   // Base range orders
   const rangeOrders = useMemo(() => {
@@ -40,15 +48,16 @@ export const AdminOrders = () => {
     return rangeOrders.filter((order) => {
       const matchesStatus =
         statusFilter === 'All' || order.status === statusFilter;
-      const matchesCategory =
-        categoryFilter === 'All' || order.category === categoryFilter;
+      const matchesType =
+        billingTypeFilter === 'All' || order.billingType === billingTypeFilter;
       const matchesSearch =
         searchQuery.trim() === '' ||
         order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesStatus && matchesCategory && matchesSearch;
+        order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.billingType && order.billingType.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesStatus && matchesType && matchesSearch;
     });
-  }, [rangeOrders, searchQuery, statusFilter, categoryFilter]);
+  }, [rangeOrders, searchQuery, statusFilter, billingTypeFilter]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
@@ -140,10 +149,11 @@ export const AdminOrders = () => {
         </div>
       )}
 
-      {/* Filter Tabs: Status on left, Category on right */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        {/* Status Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      {/* Filter Tabs: Status Pills and Billing Type Category Pills */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+        {/* Status Filter */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+          <span className="text-[11px] font-bold text-[#4E3636] uppercase tracking-wider mr-1">Status:</span>
           {FILTER_TABS.map((tab) => {
             const isActive = statusFilter === tab;
             const count =
@@ -158,7 +168,7 @@ export const AdminOrders = () => {
                   setStatusFilter(tab);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0 ${
                   isActive
                     ? 'bg-[#116D6E] text-white shadow-teal'
                     : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/40'
@@ -177,26 +187,27 @@ export const AdminOrders = () => {
           })}
         </div>
 
-        {/* Category Tabs: All, Takeaway, Dine In, Order */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#4E3636]/15 shadow-xs shrink-0">
-          <span className="text-[11px] font-bold text-[#4E3636] px-2">Category:</span>
-          {CATEGORY_TABS.map((cat) => {
-            const isActive = categoryFilter === cat;
+        {/* Billing Type Filter (3 Categories: Takeaway, Dine In, Order) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          <span className="text-[11px] font-bold text-[#4E3636] uppercase tracking-wider mr-1">Category:</span>
+          {BILLING_TYPE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = billingTypeFilter === tab.value;
             return (
               <button
-                key={cat}
-                type="button"
+                key={tab.value}
                 onClick={() => {
-                  setCategoryFilter(cat);
+                  setBillingTypeFilter(tab.value);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0 ${
                   isActive
-                    ? 'bg-[#116D6E] text-white shadow-xs'
-                    : 'text-[#4E3636] hover:text-[#321E1E] hover:bg-[#FDFBF7]'
+                    ? 'bg-[#321E1E] text-white'
+                    : 'bg-white text-[#4E3636] border border-[#4E3636]/15 hover:border-[#321E1E]/40'
                 }`}
               >
-                {cat}
+                {Icon && <Icon className="w-3.5 h-3.5" />}
+                <span>{tab.label}</span>
               </button>
             );
           })}
@@ -213,10 +224,10 @@ export const AdminOrders = () => {
                   Order ID
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Customer
+                  Customer Name
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Category
+                <th className="py-3 px-3 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                  Billing Type
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
                   Date &amp; Time
@@ -259,18 +270,33 @@ export const AdminOrders = () => {
                       </div>
                     </td>
 
-                    {/* Order Category */}
-                    <td className="py-3.5 px-4">
+                    {/* Billing Type Badge */}
+                    <td className="py-3.5 px-3">
                       <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          order.category === 'Dine In'
-                            ? 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20'
-                            : order.category === 'Order'
-                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                            : 'bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20'
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          order.billingType === 'Dine In'
+                            ? 'bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20'
+                            : order.billingType === 'Order'
+                            ? 'bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20'
+                            : 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20'
                         }`}
                       >
-                        {order.category || 'Takeaway'}
+                        {order.billingType === 'Dine In' ? (
+                          <>
+                            <UtensilsCrossed className="w-3 h-3" />
+                            <span>Dine In {order.tableNumber ? `(${order.tableNumber})` : ''}</span>
+                          </>
+                        ) : order.billingType === 'Order' ? (
+                          <>
+                            <ClipboardList className="w-3 h-3" />
+                            <span>Order</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-3 h-3" />
+                            <span>Takeaway</span>
+                          </>
+                        )}
                       </span>
                     </td>
 
@@ -324,7 +350,7 @@ export const AdminOrders = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-[#4E3636]/60">
+                  <td colSpan={8} className="py-10 text-center text-[#4E3636]/60">
                     No orders found matching your filter criteria.
                   </td>
                 </tr>
@@ -399,17 +425,31 @@ export const AdminOrders = () => {
             <div className="p-5 space-y-4 text-xs">
               <div className="flex items-center justify-between pb-3 border-b border-[#4E3636]/10">
                 <div>
-                  <span className="text-[#4E3636]">Customer &amp; Category:</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="font-bold text-[#321E1E] text-sm">{selectedOrder.customer}</p>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E]">
-                      {selectedOrder.category || 'Takeaway'}
-                    </span>
-                  </div>
+                  <span className="text-[#4E3636]">Customer:</span>
+                  <p className="font-bold text-[#321E1E] text-sm mt-0.5">{selectedOrder.customer}</p>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusBadge(selectedOrder.status)}`}>
                   {selectedOrder.status}
                 </span>
+              </div>
+
+              {/* Billing Category & Table / Notes */}
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-[#4E3636] tracking-wider block">Billing Type</span>
+                  <span className="text-xs font-bold text-[#116D6E] mt-0.5 block">
+                    {selectedOrder.billingType === 'Dine In'
+                      ? `Dine In ${selectedOrder.tableNumber ? `• Table ${selectedOrder.tableNumber}` : ''}`
+                      : selectedOrder.billingType === 'Order'
+                      ? `Advance Order ${selectedOrder.dueTime ? `• Due ${selectedOrder.dueTime}` : ''}`
+                      : 'Takeaway (Parcel)'}
+                  </span>
+                </div>
+                {selectedOrder.notes && (
+                  <span className="text-[11px] text-[#4E3636] italic max-w-[180px] text-right truncate">
+                    "{selectedOrder.notes}"
+                  </span>
+                )}
               </div>
 
               <div>
