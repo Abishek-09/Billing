@@ -9,7 +9,8 @@ import {
   Check,
   ArrowLeftRight
 } from 'lucide-react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const ROUTE_TITLES = {
   '/admin': {
@@ -44,10 +45,14 @@ const ROUTE_TITLES = {
 
 export const AdminHeader = ({ selectedDateRange = 'This Week', onSelectDateRange }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const currentRouteMeta = ROUTE_TITLES[location.pathname] || {
     title: 'Dashboard Overview',
-    subtitle: 'Welcome back, Chef Marie',
+    subtitle: `Welcome back, ${currentUser?.name || 'Chef Marie'}`,
   };
+
+  const isDashboard = location.pathname === '/admin' || location.pathname === '/admin/';
 
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -98,43 +103,45 @@ export const AdminHeader = ({ selectedDateRange = 'This Week', onSelectDateRange
 
       {/* Right Controls: Date Range Picker, Notification Bell, Admin Profile */}
       <div className="flex items-center gap-3.5">
-        {/* Date Range Picker Dropdown */}
-        <div className="relative" ref={dateRef}>
-          <button
-            type="button"
-            onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FDFBF7] border border-[#4E3636]/20 hover:border-[#116D6E] text-xs font-semibold text-[#321E1E] shadow-xs transition-all cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-[#4E3636]" />
-            <span>{selectedDateRange}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-[#4E3636] transition-transform duration-200 ${dateDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
+        {/* Date Range Picker Dropdown (Hidden on live shift Dashboard) */}
+        {!isDashboard && (
+          <div className="relative" ref={dateRef}>
+            <button
+              type="button"
+              onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FDFBF7] border border-[#4E3636]/20 hover:border-[#116D6E] text-xs font-semibold text-[#321E1E] shadow-xs transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#4E3636]" />
+              <span>{selectedDateRange}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-[#4E3636] transition-transform duration-200 ${dateDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-          {dateDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-soft-lg border border-[#4E3636]/15 py-1 z-40 animate-in fade-in zoom-in-95">
-              {DATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => {
-                    if (onSelectDateRange) {
-                      onSelectDateRange(opt);
-                    }
-                    setDateDropdownOpen(false);
-                  }}
-                  className={`w-full px-3.5 py-2 text-xs flex items-center justify-between text-left transition-colors cursor-pointer ${
-                    selectedDateRange === opt
-                      ? 'bg-[#116D6E]/10 text-[#116D6E] font-semibold'
-                      : 'text-[#321E1E] hover:bg-[#FDFBF7]'
-                  }`}
-                >
-                  <span>{opt}</span>
-                  {selectedDateRange === opt && <Check className="w-3.5 h-3.5 text-[#116D6E]" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+            {dateDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-soft-lg border border-[#4E3636]/15 py-1 z-40 animate-in fade-in zoom-in-95">
+                {DATE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectDateRange) {
+                        onSelectDateRange(opt);
+                      }
+                      setDateDropdownOpen(false);
+                    }}
+                    className={`w-full px-3.5 py-2 text-xs flex items-center justify-between text-left transition-colors cursor-pointer ${
+                      selectedDateRange === opt
+                        ? 'bg-[#116D6E]/10 text-[#116D6E] font-semibold'
+                        : 'text-[#321E1E] hover:bg-[#FDFBF7]'
+                    }`}
+                  >
+                    <span>{opt}</span>
+                    {selectedDateRange === opt && <Check className="w-3.5 h-3.5 text-[#116D6E]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Notification Bell */}
         <div className="relative" ref={notifRef}>
@@ -183,18 +190,18 @@ export const AdminHeader = ({ selectedDateRange = 'This Week', onSelectDateRange
           >
             <div className="relative">
               <img
-                src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=150&q=80"
-                alt="Chef Marie"
+                src={currentUser?.avatar || 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=150&q=80'}
+                alt={currentUser?.name || 'Admin Profile'}
                 className="w-8 h-8 rounded-lg object-cover border border-[#116D6E]/30"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
             <div className="text-left hidden sm:block">
               <div className="text-xs font-bold text-[#321E1E] leading-tight">
-                Chef Marie Laurent
+                {currentUser?.name || 'Chef Marie Laurent'}
               </div>
               <div className="text-[10px] font-medium text-[#4E3636]">
-                General Manager
+                {currentUser?.roleLabel || 'General Manager'}
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-[#4E3636] transition-transform duration-200" />
@@ -203,8 +210,8 @@ export const AdminHeader = ({ selectedDateRange = 'This Week', onSelectDateRange
           {profileOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-soft-lg border border-[#4E3636]/15 py-2 animate-in fade-in zoom-in-95 z-40">
               <div className="px-4 py-2 border-b border-[#4E3636]/10 mb-1">
-                <p className="text-xs font-bold text-[#321E1E]">SweetBite HQ</p>
-                <p className="text-[11px] text-[#4E3636]">admin@sweetbite.com</p>
+                <p className="text-xs font-bold text-[#321E1E]">{currentUser?.branch || 'SweetBite HQ'}</p>
+                <p className="text-[11px] text-[#4E3636]">{currentUser?.email || 'admin@sweetbite.com'}</p>
               </div>
 
               <div className="px-1.5 space-y-0.5 text-xs">
@@ -228,8 +235,12 @@ export const AdminHeader = ({ selectedDateRange = 'This Week', onSelectDateRange
               <div className="border-t border-[#4E3636]/10 mt-1.5 pt-1.5 px-1.5">
                 <button
                   type="button"
-                  onClick={() => setProfileOpen(false)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#CD1818] hover:bg-[#CD1818]/5 rounded-lg transition-colors text-left font-medium"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#CD1818] hover:bg-[#CD1818]/10 rounded-lg transition-colors text-left font-bold cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>

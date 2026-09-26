@@ -10,13 +10,17 @@ import {
   Check,
   SlidersHorizontal
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export const AdminTopHeader = ({
   selectedDateRange = 'This Week',
   onSelectDateRange,
   unreadNotifications = 3,
+  showDateRange = false,
 }) => {
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -65,39 +69,41 @@ export const AdminTopHeader = ({
 
       {/* Right: Date Range Picker, Notification Bell, Admin Profile Dropdown */}
       <div className="flex items-center gap-3.5">
-        {/* Date Range Picker Dropdown */}
-        <div className="relative" ref={dateRef}>
-          <button
-            onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#4E3636]/20 hover:border-[#116D6E] text-xs font-semibold text-[#321E1E] shadow-sm transition-all cursor-pointer"
-          >
-            <Calendar className="w-4 h-4 text-[#4E3636]" />
-            <span>{selectedDateRange}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#4E3636] transition-transform duration-200" />
-          </button>
+        {/* Date Range Picker Dropdown (Hidden on dashboard) */}
+        {showDateRange && (
+          <div className="relative" ref={dateRef}>
+            <button
+              onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#4E3636]/20 hover:border-[#116D6E] text-xs font-semibold text-[#321E1E] shadow-sm transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#4E3636]" />
+              <span>{selectedDateRange}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#4E3636] transition-transform duration-200" />
+            </button>
 
-          {dateDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-soft-lg border border-[#4E3636]/15 py-1 z-30 animate-in fade-in zoom-in-95">
-              {DATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => {
-                    onSelectDateRange && onSelectDateRange(opt);
-                    setDateDropdownOpen(false);
-                  }}
-                  className={`w-full px-3.5 py-2 text-xs flex items-center justify-between text-left transition-colors ${
-                    selectedDateRange === opt
-                      ? 'bg-[#116D6E]/10 text-[#116D6E] font-semibold'
-                      : 'text-[#321E1E] hover:bg-[#FDFBF7]'
-                  }`}
-                >
-                  <span>{opt}</span>
-                  {selectedDateRange === opt && <Check className="w-3.5 h-3.5 text-[#116D6E]" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+            {dateDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-soft-lg border border-[#4E3636]/15 py-1 z-30 animate-in fade-in zoom-in-95">
+                {DATE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      onSelectDateRange && onSelectDateRange(opt);
+                      setDateDropdownOpen(false);
+                    }}
+                    className={`w-full px-3.5 py-2 text-xs flex items-center justify-between text-left transition-colors ${
+                      selectedDateRange === opt
+                        ? 'bg-[#116D6E]/10 text-[#116D6E] font-semibold'
+                        : 'text-[#321E1E] hover:bg-[#FDFBF7]'
+                    }`}
+                  >
+                    <span>{opt}</span>
+                    {selectedDateRange === opt && <Check className="w-3.5 h-3.5 text-[#116D6E]" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Notification Bell Icon */}
         <div className="relative" ref={notifRef}>
@@ -185,8 +191,13 @@ export const AdminTopHeader = ({
 
               <div className="border-t border-[#4E3636]/10 mt-1.5 pt-1.5 px-1.5">
                 <button
-                  onClick={() => setProfileOpen(false)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#CD1818] hover:bg-[#CD1818]/5 rounded-lg transition-colors text-left font-medium"
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#CD1818] hover:bg-[#CD1818]/10 rounded-lg transition-colors text-left font-bold cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>

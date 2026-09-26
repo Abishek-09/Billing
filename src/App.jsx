@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
 import PosBillingDashboard from './pages/PosBillingDashboard';
 import AdminLayout from './layouts/AdminLayout';
 import AdminOverview from './pages/admin/AdminOverview';
@@ -13,24 +16,43 @@ import AdminSettings from './pages/admin/AdminSettings';
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Admin Section: Parent Layout + Child Pages via <Outlet /> */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="categories" element={<AdminCategories />} />
-          <Route path="inventory" element={<AdminInventory />} />
-          <Route path="customers" element={<AdminCustomers />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
+      <AuthProvider>
+        <Routes>
+          {/* Public Login Page */}
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* POS Bakery Billing System */}
-        <Route path="/" element={<PosBillingDashboard />} />
+          {/* Admin Section: Protected (Admin Role) */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="inventory" element={<AdminInventory />} />
+            <Route path="customers" element={<AdminCustomers />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
 
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/admin" replace />} />
-      </Routes>
+          {/* POS Bakery Billing System: Protected */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <PosBillingDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
