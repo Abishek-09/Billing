@@ -9,21 +9,62 @@ import {
   Tooltip,
 } from 'recharts';
 import { REVENUE_CHART_DATA } from '../../data/adminMockData';
-import { TrendingUp, Sparkles } from 'lucide-react';
 
-const CustomTooltip = ({ active, payload, label }) => {
+const getTimeframeMeta = (tf) => {
+  switch (tf) {
+    case 'Today':
+      return {
+        currentLabel: 'Today',
+        previousLabel: 'Yesterday',
+        subtitle: 'Hourly sales velocity today vs yesterday benchmarks',
+      };
+    case 'Yesterday':
+      return {
+        currentLabel: 'Yesterday',
+        previousLabel: 'Prior Day',
+        subtitle: 'Hourly sales velocity yesterday vs day before',
+      };
+    case 'This Month':
+      return {
+        currentLabel: 'This Month',
+        previousLabel: 'Last Month',
+        subtitle: 'Weekly sales progression this month vs last month',
+      };
+    case 'Last 30 Days':
+      return {
+        currentLabel: 'Last 30 Days',
+        previousLabel: 'Prior 30 Days',
+        subtitle: 'Rolling 30-day revenue vs previous window',
+      };
+    case 'Year to Date':
+      return {
+        currentLabel: '2026 (YTD)',
+        previousLabel: '2025',
+        subtitle: 'Monthly revenue growth vs previous year benchmarks',
+      };
+    case 'This Week':
+    default:
+      return {
+        currentLabel: 'Current Week',
+        previousLabel: 'Previous Week',
+        subtitle: 'Weekly sales flow vs prior period benchmarks',
+      };
+  }
+};
+
+const CustomTooltip = ({ active, payload, label, currentLabel, previousLabel }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 rounded-xl shadow-soft-lg border border-[#4E3636]/15 text-xs">
         <p className="font-bold text-[#321E1E] mb-1">{label} Summary</p>
         <div className="space-y-1">
           <p className="text-[#116D6E] font-semibold flex items-center justify-between gap-4">
-            <span>Revenue:</span>
+            <span>{currentLabel}:</span>
             <span className="font-extrabold text-sm">₹{payload[0].value.toLocaleString('en-IN')}</span>
           </p>
           {payload[1] && (
             <p className="text-[#4E3636]/70 flex items-center justify-between gap-4 text-[11px]">
-              <span>Last Week:</span>
+              <span>{previousLabel}:</span>
               <span>₹{payload[1].value.toLocaleString('en-IN')}</span>
             </p>
           )}
@@ -34,7 +75,10 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export const RevenueChart = () => {
+export const RevenueChart = ({ data, timeframe = 'This Week' }) => {
+  const chartData = data && data.length > 0 ? data : REVENUE_CHART_DATA;
+  const meta = getTimeframeMeta(timeframe);
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-soft border border-[#4E3636]/10 flex flex-col justify-between">
       {/* Header */}
@@ -44,17 +88,17 @@ export const RevenueChart = () => {
             Revenue Performance
           </h2>
           <p className="text-xs text-[#4E3636] mt-0.5">
-            Weekly sales flow vs prior period benchmarks
+            {meta.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-[#116D6E] font-semibold bg-[#116D6E]/10 px-2.5 py-1 rounded-lg">
             <span className="w-2 h-2 rounded-full bg-[#116D6E]" />
-            <span>Current Week</span>
+            <span>{meta.currentLabel}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[#4E3636]/70 font-medium">
             <span className="w-2 h-2 rounded-full bg-[#4E3636]/30" />
-            <span>Previous Week</span>
+            <span>{meta.previousLabel}</span>
           </div>
         </div>
       </div>
@@ -63,7 +107,7 @@ export const RevenueChart = () => {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={REVENUE_CHART_DATA}
+            data={chartData}
             margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
           >
             <defs>
@@ -97,11 +141,22 @@ export const RevenueChart = () => {
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11, fill: '#4E3636', fontWeight: 500 }}
-              tickFormatter={(val) => `₹${val / 1000}k`}
+              tickFormatter={(val) => {
+                if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+                if (val >= 1000) return `₹${Math.round(val / 1000)}k`;
+                return `₹${val}`;
+              }}
               dx={-4}
             />
 
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={
+                <CustomTooltip
+                  currentLabel={meta.currentLabel}
+                  previousLabel={meta.previousLabel}
+                />
+              }
+            />
 
             {/* Baseline comparison area (dashed line) */}
             <Area

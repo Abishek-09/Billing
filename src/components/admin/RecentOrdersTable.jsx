@@ -1,8 +1,12 @@
 import React from 'react';
-import { RECENT_ORDERS_DATA } from '../../data/adminMockData';
-import { ChevronRight, ArrowUpRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RECENT_ORDERS_DATA, getOrdersByRange } from '../../data/adminMockData';
+import { ArrowUpRight } from 'lucide-react';
 
-export const RecentOrdersTable = () => {
+export const RecentOrdersTable = ({ timeframe = 'This Week' }) => {
+  const filteredOrders = getOrdersByRange(timeframe);
+  const ordersToDisplay = filteredOrders.length > 0 ? filteredOrders.slice(0, 6) : RECENT_ORDERS_DATA.slice(0, 6);
+
   return (
     <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 overflow-hidden flex flex-col justify-between">
       {/* Table Header Section */}
@@ -12,13 +16,17 @@ export const RecentOrdersTable = () => {
             Recent Transactions
           </h2>
           <p className="text-xs text-[#4E3636] mt-0.5">
-            Latest store POS orders, invoices, and fulfillment statuses
+            Latest store POS orders, invoices, and fulfillment statuses &bull;{' '}
+            <span className="font-semibold text-[#116D6E]">{timeframe}</span>
           </p>
         </div>
-        <button className="text-xs font-semibold text-[#116D6E] hover:text-[#0e5859] flex items-center gap-1 transition-colors cursor-pointer">
+        <Link
+          to="/admin/orders"
+          className="text-xs font-semibold text-[#116D6E] hover:text-[#0e5859] flex items-center gap-1 transition-colors cursor-pointer"
+        >
           <span>View All Orders</span>
           <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
+        </Link>
       </div>
 
       {/* Table Container */}
@@ -44,7 +52,7 @@ export const RecentOrdersTable = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#4E3636]/10 text-xs">
-            {RECENT_ORDERS_DATA.map((order) => {
+            {ordersToDisplay.map((order) => {
               // Status Badge Mapping:
               // Completed: Teal background #116D6E with 10% opacity, #116D6E text
               // Pending: Warm Brown background #4E3636 with 10% opacity, #4E3636 text
@@ -113,8 +121,8 @@ export const RecentOrdersTable = () => {
 
       {/* Subtle Table Footer */}
       <div className="p-3 px-5 bg-[#FDFBF7]/40 border-t border-[#4E3636]/10 flex items-center justify-between text-xs text-[#4E3636]">
-        <span>Showing 6 of 1,240 orders</span>
-        <span className="font-medium text-[#116D6E]">Updated 2 mins ago</span>
+        <span>Showing {ordersToDisplay.length} orders for {timeframe}</span>
+        <span className="font-medium text-[#116D6E]">Live Synced</span>
       </div>
     </div>
   );

@@ -11,10 +11,10 @@ import {
   ShieldCheck,
   Store
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 
 const ADMIN_NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin', end: true },
   { id: 'orders', label: 'Orders', icon: ShoppingBag, path: '/admin/orders' },
   { id: 'inventory', label: 'Inventory', icon: Boxes, path: '/admin/inventory' },
   { id: 'customers', label: 'Customers', icon: Users, path: '/admin/customers' },
@@ -22,7 +22,7 @@ const ADMIN_NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
-export const AdminSidebar = ({ activeSection = 'dashboard', onSelectSection }) => {
+export const AdminSidebar = () => {
   return (
     <aside className="w-[240px] bg-[#116D6E] text-white flex flex-col justify-between h-screen shrink-0 select-none shadow-[4px_0_24px_rgba(17,109,110,0.18)] relative z-20">
       {/* Top Header & Branding */}
@@ -49,36 +49,42 @@ export const AdminSidebar = ({ activeSection = 'dashboard', onSelectSection }) =
         <nav className="px-3 py-5 space-y-1.5">
           {ADMIN_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
 
             return (
-              <button
+              <NavLink
                 key={item.id}
-                onClick={() => onSelectSection && onSelectSection(item.id)}
-                className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left cursor-pointer group relative ${
-                  isActive
-                    ? 'bg-white/10 text-white font-semibold border-l-4 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]'
-                    : 'text-white hover:bg-white/5 border-l-4 border-transparent'
-                }`}
-              >
-                {/* Inactive links have #4E3636 icons and white text. Active link has pure white icon */}
-                <div
-                  className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                to={item.path}
+                end={item.end}
+                className={({ isActive }) =>
+                  `w-full flex items-center gap-3.5 px-3.5 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left cursor-pointer group relative ${
                     isActive
-                      ? 'text-white bg-white/15'
-                      : 'text-[#4E3636] bg-[#FDFBF7]/90 group-hover:bg-white'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 transition-transform group-hover:scale-110" />
-                </div>
-                <span className={isActive ? 'text-white font-semibold' : 'text-white/95'}>
-                  {item.label}
-                </span>
+                      ? 'bg-white/10 text-white font-semibold border-l-4 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]'
+                      : 'text-white hover:bg-white/5 border-l-4 border-transparent'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Inactive links have #4E3636 icons and white text. Active link has pure white icon */}
+                    <div
+                      className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                        isActive
+                          ? 'text-white bg-white/15'
+                          : 'text-[#4E3636] bg-[#FDFBF7]/90 group-hover:bg-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 transition-transform group-hover:scale-110" />
+                    </div>
+                    <span className={isActive ? 'text-white font-semibold' : 'text-white/95'}>
+                      {item.label}
+                    </span>
 
-                {isActive && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
+                    {isActive && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
+                    )}
+                  </>
                 )}
-              </button>
+              </NavLink>
             );
           })}
         </nav>

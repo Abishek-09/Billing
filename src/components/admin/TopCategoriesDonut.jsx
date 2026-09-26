@@ -24,11 +24,17 @@ const CustomDonutTooltip = ({ active, payload }) => {
   return null;
 };
 
-export const TopCategoriesDonut = () => {
-  const totalCategorySales = CATEGORY_DONUT_DATA.reduce(
+export const TopCategoriesDonut = ({ data, timeframe = 'This Week' }) => {
+  const chartData = data && data.length > 0 ? data : CATEGORY_DONUT_DATA;
+  const totalCategorySales = chartData.reduce(
     (acc, curr) => acc + curr.value,
     0
   );
+
+  const formattedTotal =
+    totalCategorySales >= 100000
+      ? `₹${(totalCategorySales / 100000).toFixed(1)}L`
+      : `₹${(totalCategorySales / 1000).toFixed(1)}k`;
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-soft border border-[#4E3636]/10 flex flex-col justify-between">
@@ -38,7 +44,7 @@ export const TopCategoriesDonut = () => {
           Top Categories
         </h2>
         <p className="text-xs text-[#4E3636] mt-0.5">
-          Sales volume distribution by bakery department
+          Sales volume distribution &bull; <span className="font-semibold text-[#116D6E]">{timeframe}</span>
         </p>
       </div>
 
@@ -48,7 +54,7 @@ export const TopCategoriesDonut = () => {
           <PieChart>
             <Tooltip content={<CustomDonutTooltip />} />
             <Pie
-              data={CATEGORY_DONUT_DATA}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={58}
@@ -58,7 +64,7 @@ export const TopCategoriesDonut = () => {
               stroke="#FFFFFF"
               strokeWidth={2}
             >
-              {CATEGORY_DONUT_DATA.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
@@ -71,14 +77,14 @@ export const TopCategoriesDonut = () => {
             Total
           </div>
           <div className="text-lg font-extrabold text-[#321E1E]">
-            ₹{(totalCategorySales / 1000).toFixed(1)}k
+            {formattedTotal}
           </div>
         </div>
       </div>
 
       {/* Category Legend & Breakdown List */}
       <div className="space-y-2 pt-2 border-t border-[#4E3636]/10">
-        {CATEGORY_DONUT_DATA.map((item) => (
+        {chartData.map((item) => (
           <div
             key={item.name}
             className="flex items-center justify-between text-xs py-0.5"
