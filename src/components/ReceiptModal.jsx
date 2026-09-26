@@ -21,10 +21,6 @@ export const ReceiptModal = ({
     taxAmount = 0,
     totalAmount = 0,
     paymentMethod = 'CASH',
-    billingType = 'Takeaway',
-    tableNumber = null,
-    orderDueTime = null,
-    orderNotes = null,
   } = billData;
 
   const handlePrint = () => {
@@ -91,22 +87,6 @@ export const ReceiptModal = ({
                 <span>{date}, {time}</span>
               </div>
               <div className="flex justify-between">
-                <span>Billing Type:</span>
-                <span className="font-bold text-[#116D6E]">
-                  {billingType === 'Dine In'
-                    ? `DINE IN (${tableNumber || 'Table 1'})`
-                    : billingType === 'Order'
-                    ? `ORDER (${orderDueTime || 'PRE-BOOK'})`
-                    : 'TAKEAWAY (PARCEL)'}
-                </span>
-              </div>
-              {orderNotes && (
-                <div className="flex justify-between text-[10px] text-[#4E3636]">
-                  <span>Order Note:</span>
-                  <span className="italic max-w-[170px] text-right truncate">{orderNotes}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
                 <span>Customer:</span>
                 <span className="font-medium text-[#321E1E]">{customerName}</span>
               </div>
@@ -164,6 +144,24 @@ export const ReceiptModal = ({
                 <span className="text-[#321E1E]">GRAND TOTAL:</span>
                 <span>₹{totalAmount.toLocaleString('en-IN')}</span>
               </div>
+              {billData.orderType && (
+                <div className="flex justify-between text-[10px] text-[#4E3636] pt-1">
+                  <span>Order Type:</span>
+                  <span className="font-bold uppercase text-[#321E1E]">{billData.orderType}</span>
+                </div>
+              )}
+              {billData.pendingAmount > 0 ? (
+                <>
+                  <div className="flex justify-between text-[10px] text-emerald-700">
+                    <span>Advance Paid:</span>
+                    <span className="font-bold">₹{Number(billData.advancePaid).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-[#CD1818] pt-0.5">
+                    <span>BALANCE DUE:</span>
+                    <span>₹{Number(billData.pendingAmount).toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              ) : null}
               <div className="flex justify-between text-[10px] text-[#4E3636] pt-1">
                 <span>Paid via:</span>
                 <span className="font-bold uppercase text-[#116D6E]">{paymentMethod}</span>

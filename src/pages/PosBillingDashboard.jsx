@@ -13,10 +13,12 @@ import {
   SettingsView
 } from '../components/OtherViews';
 import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
+import { ALL_ORDERS_DATA } from '../data/adminMockData';
 
 export function PosBillingDashboard() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('billing');
+  const [currentOrderMeta, setCurrentOrderMeta] = useState(null);
 
   // Search & Category Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,12 +56,6 @@ export function PosBillingDashboard() {
   const [billNumber, setBillNumber] = useState('SB-1043');
   const [selectedCustomer, setSelectedCustomer] = useState(CUSTOMERS[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
-
-  // Billing Type State (3 Categories: Takeaway, Dine In, Order)
-  const [billingType, setBillingType] = useState('Takeaway');
-  const [tableNumber, setTableNumber] = useState('T-1');
-  const [orderDueTime, setOrderDueTime] = useState('Today, 06:00 PM');
-  const [orderNotes, setOrderNotes] = useState('');
 
   // Modals State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -115,17 +111,17 @@ export function PosBillingDashboard() {
   const handleClearCart = () => {
     setCartItems([]);
     setDiscountPercent(0);
-    setOrderNotes('');
   };
 
   // Payment Flow
-  const handleOpenPayNow = () => {
+  const handleOpenPayNow = (orderData) => {
     if (cartItems.length === 0) return;
+    setCurrentOrderMeta(orderData);
     setIsPaymentModalOpen(true);
   };
 
   // Print Bill Flow
-  const handleOpenPrintBill = () => {
+  const handleOpenPrintBill = (orderData) => {
     if (cartItems.length === 0) return;
     const subTotal = cartItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
@@ -135,6 +131,7 @@ export function PosBillingDashboard() {
     const taxableAmount = Math.max(0, subTotal - discountAmount);
     const taxAmount = Math.round(taxableAmount * 0.05);
     const totalAmount = taxableAmount + taxAmount;
+    const isPreOrder = orderData?.orderType === 'order';
 
     setLastCompletedBill({
       billNumber,
@@ -145,11 +142,10 @@ export function PosBillingDashboard() {
       discountPercent,
       taxAmount,
       totalAmount,
+      orderType: orderData?.orderTypeLabel || 'Takeaway',
+      advancePaid: isPreOrder ? orderData.advancePaid : totalAmount,
+      pendingAmount: isPreOrder ? orderData.pendingAmount : 0,
       paymentMethod: 'PENDING / PROFORMA',
-      billingType,
-      tableNumber: billingType === 'Dine In' ? tableNumber : null,
-      orderDueTime: billingType === 'Order' ? orderDueTime : null,
-      orderNotes: billingType === 'Order' ? orderNotes : null,
     });
     setIsReceiptModalOpen(true);
   };
@@ -164,6 +160,7 @@ export function PosBillingDashboard() {
     const taxableAmount = Math.max(0, subTotal - discountAmount);
     const taxAmount = Math.round(taxableAmount * 0.05);
     const totalAmount = taxableAmount + taxAmount;
+    const isPreOrder = currentOrderMeta?.orderType === 'order';
 
     const completed = {
       billNumber: paymentDetails.billNumber,
@@ -174,14 +171,38 @@ export function PosBillingDashboard() {
       discountPercent,
       taxAmount,
       totalAmount,
+      orderType: currentOrderMeta?.orderTypeLabel || 'Takeaway',
+      advancePaid: isPreOrder ? currentOrderMeta.advancePaid : totalAmount,
+      pendingAmount: isPreOrder ? currentOrderMeta.pendingAmount : 0,
       paymentMethod: paymentDetails.method,
       tendered: paymentDetails.tendered,
       change: paymentDetails.change,
-      billingType,
-      tableNumber: billingType === 'Dine In' ? tableNumber : null,
-      orderDueTime: billingType === 'Order' ? orderDueTime : null,
-      orderNotes: billingType === 'Order' ? orderNotes : null,
     };
+
+    // Prepend to ALL_ORDERS_DATA so it immediately surfaces on /admin/orders!
+    const newAdminOrder = {
+      id: `ORD-${Date.now().toString().slice(-4)}`,
+      customer: paymentDetails.customerName,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+      type: currentOrderMeta?.orderTypeLabel || 'Takeaway',
+      date: new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }) + ', ' + new Date().toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }),
+      items: `${cartItems.length} items`,
+      itemsList: cartItems.map((it) => `${it.quantity}x ${it.name}`),
+      totalAmount: totalAmount,
+      amount: `₹${totalAmount.toLocaleString('en-IN')}`,
+      advancePaid: isPreOrder ? currentOrderMeta.advancePaid : '-',
+      pendingAmount: isPreOrder ? currentOrderMeta.pendingAmount : 0,
+      status: (isPreOrder && currentOrderMeta?.pendingAmount > 0) ? 'Pending Payment' : 'Completed',
+    };
+    ALL_ORDERS_DATA.unshift(newAdminOrder);
 
     setLastCompletedBill(completed);
     setIsReceiptModalOpen(true);
@@ -192,7 +213,7 @@ export function PosBillingDashboard() {
     setCartItems([]);
     setDiscountPercent(0);
     setSelectedCustomer(CUSTOMERS[0]);
-    setOrderNotes('');
+    setCurrentOrderMeta(null);
   };
 
   // Cart total calculation for modal
@@ -236,14 +257,6 @@ export function PosBillingDashboard() {
             onSelectCustomer={setSelectedCustomer}
             discountPercent={discountPercent}
             setDiscountPercent={setDiscountPercent}
-            billingType={billingType}
-            onSelectBillingType={setBillingType}
-            tableNumber={tableNumber}
-            onSelectTableNumber={setTableNumber}
-            orderDueTime={orderDueTime}
-            onSetOrderDueTime={setOrderDueTime}
-            orderNotes={orderNotes}
-            onSetOrderNotes={setOrderNotes}
             onPayNow={handleOpenPayNow}
             onPrintBill={handleOpenPrintBill}
           />
@@ -266,13 +279,12 @@ export function PosBillingDashboard() {
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        totalAmount={currentTotalAmount}
+        totalAmount={currentOrderMeta ? currentOrderMeta.amountToPayNow : currentTotalAmount}
+        fullTotalAmount={currentOrderMeta ? currentOrderMeta.totalAmount : currentTotalAmount}
+        orderType={currentOrderMeta ? currentOrderMeta.orderTypeLabel : 'Takeaway'}
+        pendingAmount={currentOrderMeta ? currentOrderMeta.pendingAmount : 0}
         customerName={selectedCustomer.name}
         billNumber={billNumber}
-        billingType={billingType}
-        tableNumber={tableNumber}
-        orderDueTime={orderDueTime}
-        orderNotes={orderNotes}
         onPaymentSuccess={handlePaymentSuccess}
       />
 

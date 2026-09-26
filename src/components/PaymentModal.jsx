@@ -17,12 +17,11 @@ export const PaymentModal = ({
   isOpen,
   onClose,
   totalAmount,
+  fullTotalAmount,
+  orderType = 'Takeaway',
+  pendingAmount = 0,
   customerName,
   billNumber,
-  billingType = 'Takeaway',
-  tableNumber = 'T-1',
-  orderDueTime = 'Today, 06:00 PM',
-  orderNotes = '',
   onPaymentSuccess,
 }) => {
   const [method, setMethod] = useState('cash'); // 'cash' | 'upi' | 'card' | 'split'
@@ -63,14 +62,13 @@ export const PaymentModal = ({
           billNumber,
           customerName,
           amount: totalAmount,
+          orderType,
+          fullTotalAmount: fullTotalAmount || totalAmount,
+          pendingAmount,
           method: method.toUpperCase(),
           tendered,
           change: changeDue,
           timestamp: new Date(),
-          billingType,
-          tableNumber: billingType === 'Dine In' ? tableNumber : null,
-          orderDueTime: billingType === 'Order' ? orderDueTime : null,
-          orderNotes: billingType === 'Order' ? orderNotes : null,
         });
         setPaymentDone(false);
         onClose();
@@ -89,43 +87,41 @@ export const PaymentModal = ({
             </div>
             <div>
               <h3 className="font-serif text-lg font-bold leading-tight">
-                Complete Payment
+                {orderType === 'Order' ? 'Pre-Order Advance Payment' : 'Complete Payment'}
               </h3>
-              <div className="flex items-center gap-2 flex-wrap text-xs text-white/80 mt-0.5">
-                <span>Bill {billNumber} &bull; {customerName}</span>
-                <span className="inline-flex items-center px-2 py-0.2 rounded bg-white/20 text-white font-semibold text-[10px]">
-                  {billingType === 'Dine In'
-                    ? `Dine In (${tableNumber})`
-                    : billingType === 'Order'
-                    ? `Order (${orderDueTime})`
-                    : 'Takeaway'}
-                </span>
-              </div>
+              <p className="text-xs text-white/80">
+                Bill {billNumber} &bull; {customerName} &bull; {orderType}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/15 text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-white/15 text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-5">
           {/* Amount Due Card */}
-          <div className="bg-[#FDFBF7] p-4 rounded-xl border border-[#4E3636]/10 flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-[#4E3636] block">
-                Total Payable Amount
+          <div className="bg-[#FDFBF7] p-4 rounded-xl border border-[#4E3636]/10 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#4E3636]">
+                {orderType === 'Order' ? 'Advance Amount Payable Now' : 'Total Payable Amount'}
               </span>
-              <span className="text-[11px] font-medium text-[#116D6E]">
-                Category: {billingType === 'Dine In' ? `Dine In • ${tableNumber}` : billingType === 'Order' ? `Advance Order • ${orderDueTime}` : 'Takeaway Packaging'}
+              <span className="text-3xl font-extrabold text-[#CD1818]">
+                ₹{totalAmount.toLocaleString('en-IN')}
               </span>
             </div>
-            <span className="text-3xl font-extrabold text-[#CD1818]">
-              ₹{totalAmount.toLocaleString('en-IN')}
-            </span>
+            {orderType === 'Order' && pendingAmount > 0 && (
+              <div className="pt-2 border-t border-[#4E3636]/10 flex items-center justify-between text-xs text-[#4E3636]">
+                <span>Total: ₹{(fullTotalAmount || totalAmount).toLocaleString('en-IN')}</span>
+                <span className="font-bold text-[#CD1818]">
+                  Balance Due on Pickup: ₹{pendingAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Payment Method Tabs */}

@@ -13,8 +13,8 @@ import {
   Clock,
   AlertCircle,
   ShoppingBag,
-  UtensilsCrossed,
-  ClipboardList
+  Utensils,
+  CreditCard
 } from 'lucide-react';
 import { ALL_ORDERS_DATA, getOrdersByRange } from '../../data/adminMockData';
 
@@ -22,42 +22,71 @@ export const AdminOrders = () => {
   const outletContext = useOutletContext();
   const selectedDateRange = outletContext?.selectedDateRange || 'This Week';
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [billingTypeFilter, setBillingTypeFilter] = useState('All');
+  const [activeTab, setActiveTab] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [collectModalOrder, setCollectModalOrder] = useState(null);
+  const [ordersOverride, setOrdersOverride] = useState({});
+  const [toastMessage, setToastMessage] = useState('');
   const [exportNotice, setExportNotice] = useState(false);
   const itemsPerPage = 6;
 
-  // Filter tabs
-  const FILTER_TABS = ['All', 'Pending', 'Completed', 'Cancelled'];
-  const BILLING_TYPE_TABS = [
-    { label: 'All Categories', value: 'All' },
-    { label: 'Takeaway', value: 'Takeaway', icon: ShoppingBag },
-    { label: 'Dine In', value: 'Dine In', icon: UtensilsCrossed },
-    { label: 'Order', value: 'Order', icon: ClipboardList },
-  ];
+  // Filter tabs: 'All', 'Takeaway', 'Dine-in', 'Orders', 'Pending Payments'
+  const FILTER_TABS = ['All', 'Takeaway', 'Dine-in', 'Orders', 'Pending Payments'];
 
   // Base range orders
-  const rangeOrders = useMemo(() => {
+  const baseRangeOrders = useMemo(() => {
     return getOrdersByRange(selectedDateRange);
   }, [selectedDateRange]);
+
+  // Apply overrides if any balance was collected in session
+  const rangeOrders = useMemo(() => {
+    return baseRangeOrders.map((order) => {
+      if (ordersOverride[order.id]) {
+        return { ...order, ...ordersOverride[order.id] };
+      }
+      return order;
+    });
+  }, [baseRangeOrders, ordersOverride]);
 
   // Filtered orders
   const filteredOrders = useMemo(() => {
     return rangeOrders.filter((order) => {
-      const matchesStatus =
-        statusFilter === 'All' || order.status === statusFilter;
-      const matchesType =
-        billingTypeFilter === 'All' || order.billingType === billingTypeFilter;
+      // 1. Tab Filter
+      let matchesTab = true;
+      if (activeTab === 'Takeaway') {
+        matchesTab = order.type === 'Takeaway';
+      } else if (activeTab === 'Dine-in') {
+        matchesTab = order.type === 'Dine-in';
+      } else if (activeTab === 'Orders') {
+        matchesTab = order.type === 'Order';
+      } else if (activeTab === 'Pending Payments') {
+        matchesTab = order.pendingAmount > 0 || order.status === 'Pending Payment';
+      }
+
+      // 2. Search Query
+      const query = searchQuery.trim().toLowerCase();
       const matchesSearch =
-        searchQuery.trim() === '' ||
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (order.billingType && order.billingType.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesStatus && matchesType && matchesSearch;
+        query === '' ||
+        order.id.toLowerCase().includes(query) ||
+        order.customer.toLowerCase().includes(query) ||
+        (order.type && order.type.toLowerCase().includes(query));
+
+      return matchesTab && matchesSearch;
     });
-  }, [rangeOrders, searchQuery, statusFilter, billingTypeFilter]);
+  }, [rangeOrders, searchQuery, activeTab]);
+
+  // Tab Count Helper
+  const getTabCount = (tab) => {
+    if (tab === 'All') return rangeOrders.length;
+    if (tab === 'Takeaway') return rangeOrders.filter((o) => o.type === 'Takeaway').length;
+    if (tab === 'Dine-in') return rangeOrders.filter((o) => o.type === 'Dine-in').length;
+    if (tab === 'Orders') return rangeOrders.filter((o) => o.type === 'Order').length;
+    if (tab === 'Pending Payments') {
+      return rangeOrders.filter((o) => o.pendingAmount > 0 || o.status === 'Pending Payment').length;
+    }
+    return 0;
+  };
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage) || 1;
@@ -71,11 +100,11 @@ export const AdminOrders = () => {
     setTimeout(() => setExportNotice(false), 2500);
 
     // Generate CSV content
-    const headers = 'Order ID,Customer,Date & Time,Items,Total Amount,Status\n';
+    const headers = 'Order ID,Customer,Type,Date & Time,Items,Total Amount,Advance Paid,Pending Amount,Status\n';
     const rows = filteredOrders
       .map(
         (o) =>
-          `"${o.id}","${o.customer}","${o.date}","${o.items}","${o.amount}","${o.status}"`
+          `"${o.id}","${o.customer}","${o.type}","${o.date}","${o.items}","₹${o.totalAmount}","${o.advancePaid}","₹${o.pendingAmount}","${o.status}"`
       )
       .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
@@ -88,22 +117,40 @@ export const AdminOrders = () => {
     document.body.removeChild(link);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Completed':
-        return 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20';
-      case 'Pending':
-        return 'bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20';
-      case 'Cancelled':
-        return 'bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20';
-      default:
-        return 'bg-[#4E3636]/10 text-[#4E3636]';
+  // Settle / Collect Balance Handler
+  const handleConfirmCollection = (method) => {
+    if (!collectModalOrder) return;
+    const settledAmount = collectModalOrder.pendingAmount;
+    const orderId = collectModalOrder.id;
+
+    // Update in-memory override
+    const updatedProps = {
+      advancePaid: collectModalOrder.totalAmount,
+      pendingAmount: 0,
+      status: 'Completed',
+    };
+
+    setOrdersOverride((prev) => ({
+      ...prev,
+      [orderId]: updatedProps,
+    }));
+
+    // Update global ALL_ORDERS_DATA reference
+    const found = ALL_ORDERS_DATA.find((o) => o.id === orderId);
+    if (found) {
+      found.advancePaid = found.totalAmount;
+      found.pendingAmount = 0;
+      found.status = 'Completed';
     }
+
+    setToastMessage(`Collected remaining balance of ₹${settledAmount.toLocaleString('en-IN')} for ${orderId} via ${method}. Order Completed!`);
+    setCollectModalOrder(null);
+    setTimeout(() => setToastMessage(''), 4000);
   };
 
   return (
     <div className="space-y-5">
-      {/* Top Toolbar: Search bar on left, Date Picker & Export CSV on right */}
+      {/* Top Toolbar: Search bar on left, Date Range Indicator & Export CSV on right */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Search bar */}
         <div className="relative flex-1 max-w-md">
@@ -139,7 +186,22 @@ export const AdminOrders = () => {
         </div>
       </div>
 
-      {/* Export notification toast */}
+      {/* Notifications / Toast alerts */}
+      {toastMessage && (
+        <div className="p-3 bg-[#116D6E]/10 border border-[#116D6E]/20 text-[#116D6E] rounded-xl text-xs font-semibold flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#116D6E]" />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            onClick={() => setToastMessage('')}
+            className="text-xs font-bold text-[#116D6E] hover:underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {exportNotice && (
         <div className="p-3 bg-[#116D6E]/10 border border-[#116D6E]/20 text-[#116D6E] rounded-xl text-xs font-semibold flex items-center justify-between animate-in fade-in">
           <div className="flex items-center gap-2">
@@ -149,69 +211,36 @@ export const AdminOrders = () => {
         </div>
       )}
 
-      {/* Filter Tabs: Status Pills and Billing Type Category Pills */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
-        {/* Status Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-          <span className="text-[11px] font-bold text-[#4E3636] uppercase tracking-wider mr-1">Status:</span>
-          {FILTER_TABS.map((tab) => {
-            const isActive = statusFilter === tab;
-            const count =
-              tab === 'All'
-                ? rangeOrders.length
-                : rangeOrders.filter((o) => o.status === tab).length;
+      {/* Filter Tabs: Pills for "All", "Takeaway", "Dine-in", "Orders", "Pending Payments" */}
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {FILTER_TABS.map((tab) => {
+          const isActive = activeTab === tab;
+          const count = getTabCount(tab);
 
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  setStatusFilter(tab);
-                  setCurrentPage(1);
-                }}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0 ${
-                  isActive
-                    ? 'bg-[#116D6E] text-white shadow-teal'
-                    : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/40'
+          return (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-[#116D6E] text-white shadow-teal'
+                  : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/40'
+              }`}
+            >
+              <span>{tab}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-[#FDFBF7] text-[#4E3636]'
                 }`}
               >
-                <span>{tab}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-[#FDFBF7] text-[#4E3636]'
-                  }`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Billing Type Filter (3 Categories: Takeaway, Dine In, Order) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-          <span className="text-[11px] font-bold text-[#4E3636] uppercase tracking-wider mr-1">Category:</span>
-          {BILLING_TYPE_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = billingTypeFilter === tab.value;
-            return (
-              <button
-                key={tab.value}
-                onClick={() => {
-                  setBillingTypeFilter(tab.value);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0 ${
-                  isActive
-                    ? 'bg-[#321E1E] text-white'
-                    : 'bg-white text-[#4E3636] border border-[#4E3636]/15 hover:border-[#321E1E]/40'
-                }`}
-              >
-                {Icon && <Icon className="w-3.5 h-3.5" />}
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Data Table: White background, rounded-xl, soft shadow */}
@@ -226,17 +255,17 @@ export const AdminOrders = () => {
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
                   Customer Name
                 </th>
-                <th className="py-3 px-3 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Billing Type
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                  Type
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Date &amp; Time
+                  Total Amount (₹)
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Items
+                  Advance Paid (₹)
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
-                  Total Amount
+                  Pending Amount (₹)
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
                   Status
@@ -253,12 +282,12 @@ export const AdminOrders = () => {
                     key={order.id}
                     className="hover:bg-[#FDFBF7]/70 transition-colors"
                   >
-                    {/* Order ID */}
+                    {/* 1. Order ID */}
                     <td className="py-3.5 px-5 font-bold font-mono text-[#321E1E]">
                       {order.id}
                     </td>
 
-                    {/* Customer Name */}
+                    {/* 2. Customer Name */}
                     <td className="py-3.5 px-4 text-[#321E1E]">
                       <div className="flex items-center gap-2.5">
                         <img
@@ -270,79 +299,97 @@ export const AdminOrders = () => {
                       </div>
                     </td>
 
-                    {/* Billing Type Badge */}
-                    <td className="py-3.5 px-3">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          order.billingType === 'Dine In'
-                            ? 'bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20'
-                            : order.billingType === 'Order'
-                            ? 'bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20'
-                            : 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20'
-                        }`}
-                      >
-                        {order.billingType === 'Dine In' ? (
-                          <>
-                            <UtensilsCrossed className="w-3 h-3" />
-                            <span>Dine In {order.tableNumber ? `(${order.tableNumber})` : ''}</span>
-                          </>
-                        ) : order.billingType === 'Order' ? (
-                          <>
-                            <ClipboardList className="w-3 h-3" />
-                            <span>Order</span>
-                          </>
-                        ) : (
-                          <>
-                            <ShoppingBag className="w-3 h-3" />
-                            <span>Takeaway</span>
-                          </>
-                        )}
-                      </span>
-                    </td>
-
-                    {/* Date & Time */}
-                    <td className="py-3.5 px-4 text-[#321E1E]/80">
-                      {order.date}
-                    </td>
-
-                    {/* Items */}
-                    <td className="py-3.5 px-4 text-[#4E3636] font-medium">
-                      {order.items}
-                    </td>
-
-                    {/* Total Amount */}
-                    <td className="py-3.5 px-4 font-bold text-[#321E1E]">
-                      {order.amount}
-                    </td>
-
-                    {/* Status Badges */}
+                    {/* 3. Type (Takeaway, Dine-in, Order) - Elegant Badge */}
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getStatusBadge(
-                          order.status
-                        )}`}
-                      >
-                        {order.status}
-                      </span>
+                      {order.type === 'Takeaway' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20">
+                          <ShoppingBag className="w-3 h-3 text-[#116D6E]" />
+                          <span>Takeaway</span>
+                        </span>
+                      )}
+                      {order.type === 'Dine-in' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300/60">
+                          <Utensils className="w-3 h-3 text-amber-700" />
+                          <span>Dine-in</span>
+                        </span>
+                      )}
+                      {order.type === 'Order' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#4E3636]/10 text-[#4E3636] border border-[#4E3636]/20">
+                          <Calendar className="w-3 h-3 text-[#4E3636]" />
+                          <span>Order</span>
+                        </span>
+                      )}
                     </td>
 
-                    {/* Action Column: "View" button (Text #116D6E, hover underline) and a "Print" icon */}
+                    {/* 4. Total Amount (₹) */}
+                    <td className="py-3.5 px-4 font-bold text-[#321E1E]">
+                      ₹{order.totalAmount.toLocaleString('en-IN')}
+                    </td>
+
+                    {/* 5. Advance Paid (₹) - Displays "-" for Takeaway/Dine-in */}
+                    <td className="py-3.5 px-4 font-medium text-[#4E3636]">
+                      {order.advancePaid === '-'
+                        ? '—'
+                        : `₹${Number(order.advancePaid).toLocaleString('en-IN')}`}
+                    </td>
+
+                    {/* 6. Pending Amount (₹) - If > 0, bold #CD1818. If 0, #4E3636 */}
+                    <td className="py-3.5 px-4">
+                      {order.pendingAmount > 0 ? (
+                        <span className="font-extrabold text-[#CD1818]">
+                          ₹{order.pendingAmount.toLocaleString('en-IN')}
+                        </span>
+                      ) : (
+                        <span className="font-medium text-[#4E3636]">
+                          ₹0
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 7. Status: "Completed" (Teal text), "Pending Payment" (Crimson text) */}
+                    <td className="py-3.5 px-4">
+                      {order.status === 'Completed' ? (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20">
+                          Pending Payment
+                        </span>
+                      )}
+                    </td>
+
+                    {/* 8. Action Column:
+                        If Pending Amount > 0: Show "Collect Balance" button (Outline #CD1818, hover fill #CD1818)
+                        If Pending Amount = 0: Show "Print Receipt" icon/button (Text #4E3636) */}
                     <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end gap-3">
+                      <div className="flex items-center justify-end gap-2.5">
+                        {order.pendingAmount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setCollectModalOrder(order)}
+                            className="px-3 py-1 rounded-lg border border-[#CD1818] text-[#CD1818] hover:bg-[#CD1818] hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Collect Balance</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrder(order)}
+                            className="p-1.5 rounded-lg text-[#4E3636] hover:text-[#321E1E] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
+                            title="Print Receipt"
+                          >
+                            <Printer className="w-4 h-4 text-[#4E3636]" />
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => setSelectedOrder(order)}
-                          className="text-[#116D6E] hover:underline font-semibold text-xs cursor-pointer"
+                          className="text-xs font-semibold text-[#116D6E] hover:underline cursor-pointer"
                         >
                           View
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedOrder(order)}
-                          className="p-1 rounded text-[#4E3636]/70 hover:text-[#321E1E] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
-                          title="Print Receipt"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -351,7 +398,7 @@ export const AdminOrders = () => {
               ) : (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-[#4E3636]/60">
-                    No orders found matching your filter criteria.
+                    No orders found matching &quot;{activeTab}&quot; filter criteria.
                   </td>
                 </tr>
               )}
@@ -359,10 +406,10 @@ export const AdminOrders = () => {
           </table>
         </div>
 
-        {/* Pagination: Bottom right, simple previous/next buttons with page numbers */}
+        {/* Pagination */}
         <div className="p-4 px-5 bg-[#FDFBF7]/40 border-t border-[#4E3636]/10 flex items-center justify-between text-xs text-[#4E3636]">
           <div>
-            Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+            Showing {filteredOrders.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{' '}
             {Math.min(currentPage * itemsPerPage, filteredOrders.length)} of{' '}
             {filteredOrders.length} orders
           </div>
@@ -403,6 +450,89 @@ export const AdminOrders = () => {
         </div>
       </div>
 
+      {/* Collect Balance Modal */}
+      {collectModalOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#321E1E]/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-soft-lg border border-[#4E3636]/15 overflow-hidden animate-in zoom-in-95">
+            {/* Header */}
+            <div className="bg-[#CD1818] p-4 px-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-white" />
+                <h3 className="font-serif font-bold text-base">Collect Pending Balance</h3>
+              </div>
+              <button
+                onClick={() => setCollectModalOrder(null)}
+                className="p-1 rounded-lg hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              {/* Order Info Summary */}
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 space-y-2">
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Order ID:</span>
+                  <span className="font-bold text-[#321E1E] font-mono">{collectModalOrder.id}</span>
+                </div>
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Customer:</span>
+                  <span className="font-semibold text-[#321E1E]">{collectModalOrder.customer}</span>
+                </div>
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Total Bill Amount:</span>
+                  <span className="font-bold text-[#321E1E]">₹{collectModalOrder.totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Advance Received:</span>
+                  <span className="font-semibold text-[#116D6E]">
+                    {collectModalOrder.advancePaid === '-' ? '₹0' : `₹${Number(collectModalOrder.advancePaid).toLocaleString('en-IN')}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount to collect */}
+              <div className="p-4 bg-[#CD1818]/10 rounded-xl border border-[#CD1818]/20 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-[#CD1818] text-sm block">Balance Due to Settle</span>
+                  <span className="text-[10px] text-[#4E3636]">Customer is picking up order</span>
+                </div>
+                <span className="text-2xl font-extrabold text-[#CD1818]">
+                  ₹{collectModalOrder.pendingAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="text-xs font-semibold text-[#4E3636] block mb-2">
+                  Select Settlement Method
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Cash', 'UPI / QR', 'Card'].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => handleConfirmCollection(method)}
+                      className="py-2.5 px-3 rounded-xl border border-[#116D6E] bg-[#116D6E]/10 hover:bg-[#116D6E] hover:text-white text-[#116D6E] font-bold text-xs text-center transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCollectModalOrder(null)}
+                className="w-full py-2 bg-white text-[#4E3636] border border-[#4E3636]/20 rounded-xl hover:bg-[#FDFBF7] font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View Order Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#321E1E]/60 backdrop-blur-xs animate-in fade-in">
@@ -416,7 +546,7 @@ export const AdminOrders = () => {
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-lg hover:bg-white/20 text-white"
+                className="p-1 rounded-lg hover:bg-white/20 text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -428,28 +558,18 @@ export const AdminOrders = () => {
                   <span className="text-[#4E3636]">Customer:</span>
                   <p className="font-bold text-[#321E1E] text-sm mt-0.5">{selectedOrder.customer}</p>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusBadge(selectedOrder.status)}`}>
-                  {selectedOrder.status}
-                </span>
-              </div>
-
-              {/* Billing Category & Table / Notes */}
-              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-[#4E3636] tracking-wider block">Billing Type</span>
-                  <span className="text-xs font-bold text-[#116D6E] mt-0.5 block">
-                    {selectedOrder.billingType === 'Dine In'
-                      ? `Dine In ${selectedOrder.tableNumber ? `• Table ${selectedOrder.tableNumber}` : ''}`
-                      : selectedOrder.billingType === 'Order'
-                      ? `Advance Order ${selectedOrder.dueTime ? `• Due ${selectedOrder.dueTime}` : ''}`
-                      : 'Takeaway (Parcel)'}
+                <div className="text-right space-y-1">
+                  <span
+                    className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      selectedOrder.status === 'Completed'
+                        ? 'bg-[#116D6E]/10 text-[#116D6E] border border-[#116D6E]/20'
+                        : 'bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20'
+                    }`}
+                  >
+                    {selectedOrder.status}
                   </span>
+                  <div className="text-[10px] text-[#4E3636]">Type: {selectedOrder.type}</div>
                 </div>
-                {selectedOrder.notes && (
-                  <span className="text-[11px] text-[#4E3636] italic max-w-[180px] text-right truncate">
-                    "{selectedOrder.notes}"
-                  </span>
-                )}
               </div>
 
               <div>
@@ -458,7 +578,10 @@ export const AdminOrders = () => {
                 </span>
                 <ul className="mt-2 space-y-1.5">
                   {selectedOrder.itemsList?.map((item, idx) => (
-                    <li key={idx} className="p-2 bg-[#FDFBF7] rounded-lg border border-[#4E3636]/10 flex items-center justify-between text-[#321E1E]">
+                    <li
+                      key={idx}
+                      className="p-2 bg-[#FDFBF7] rounded-lg border border-[#4E3636]/10 flex items-center justify-between text-[#321E1E]"
+                    >
                       <span>{item}</span>
                       <span className="font-semibold text-[#116D6E]">Confirmed</span>
                     </li>
@@ -466,22 +589,56 @@ export const AdminOrders = () => {
                 </ul>
               </div>
 
-              <div className="pt-3 border-t border-[#4E3636]/10 flex items-baseline justify-between">
-                <span className="font-bold text-[#321E1E]">Gross Total:</span>
-                <span className="text-xl font-extrabold text-[#CD1818]">{selectedOrder.amount}</span>
+              {/* Financial Breakdown */}
+              <div className="p-3 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 space-y-2">
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Total Amount:</span>
+                  <span className="font-bold text-[#321E1E]">₹{selectedOrder.totalAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center justify-between text-[#4E3636]">
+                  <span>Advance Paid:</span>
+                  <span className="font-medium text-[#116D6E]">
+                    {selectedOrder.advancePaid === '-' ? '—' : `₹${Number(selectedOrder.advancePaid).toLocaleString('en-IN')}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-[#4E3636]/10">
+                  <span className="font-bold text-[#321E1E]">Pending Balance:</span>
+                  <span
+                    className={`font-extrabold ${
+                      selectedOrder.pendingAmount > 0 ? 'text-[#CD1818] text-sm' : 'text-[#4E3636]'
+                    }`}
+                  >
+                    ₹{selectedOrder.pendingAmount.toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
 
+              {/* Action buttons in modal */}
               <div className="pt-2 flex items-center gap-2">
+                {selectedOrder.pendingAmount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ord = selectedOrder;
+                      setSelectedOrder(null);
+                      setCollectModalOrder(ord);
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-[#CD1818] text-white font-bold flex items-center justify-center gap-1.5 hover:bg-[#b51414] transition-colors cursor-pointer"
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Collect ₹{selectedOrder.pendingAmount.toLocaleString('en-IN')}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => window.print()}
-                  className="flex-1 py-2 rounded-xl bg-white border border-[#321E1E] text-[#321E1E] font-semibold flex items-center justify-center gap-1.5 hover:bg-[#FDFBF7]"
+                  className="flex-1 py-2 rounded-xl bg-white border border-[#321E1E] text-[#321E1E] font-semibold flex items-center justify-center gap-1.5 hover:bg-[#FDFBF7] cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Receipt</span>
                 </button>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="flex-1 py-2 rounded-xl bg-[#116D6E] text-white font-semibold hover:bg-[#0e5859]"
+                  className="flex-1 py-2 rounded-xl bg-[#116D6E] text-white font-semibold hover:bg-[#0e5859] cursor-pointer"
                 >
                   Close
                 </button>

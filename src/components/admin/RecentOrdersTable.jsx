@@ -88,16 +88,7 @@ export const RecentOrdersTable = ({ timeframe = 'This Week' }) => {
                         alt={order.customer}
                         className="w-6 h-6 rounded-full object-cover border border-[#4E3636]/15"
                       />
-                      <div>
-                        <div className="font-semibold">{order.customer}</div>
-                        <div className="text-[10px] font-medium text-[#116D6E]">
-                          {order.billingType === 'Dine In'
-                            ? `Dine In • ${order.tableNumber || 'Table'}`
-                            : order.billingType === 'Order'
-                            ? 'Advance Order'
-                            : 'Takeaway'}
-                        </div>
-                      </div>
+                      <span className="font-semibold">{order.customer}</span>
                     </div>
                   </td>
 

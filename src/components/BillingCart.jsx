@@ -6,15 +6,14 @@ import {
   Printer,
   ChevronDown,
   ShoppingBag,
+  Utensils,
   Percent,
   Check,
   AlertCircle,
   CreditCard,
   User,
   Calendar,
-  Sparkles,
-  UtensilsCrossed,
-  ClipboardList
+  Sparkles
 } from 'lucide-react';
 import { CUSTOMERS } from '../data/mockData';
 
@@ -28,19 +27,13 @@ export const BillingCart = ({
   onSelectCustomer,
   discountPercent,
   setDiscountPercent,
-  billingType = 'Takeaway',
-  onSelectBillingType,
-  tableNumber = 'T-1',
-  onSelectTableNumber,
-  orderDueTime = 'Today, 06:00 PM',
-  onSetOrderDueTime,
-  orderNotes = '',
-  onSetOrderNotes,
   onPayNow,
   onPrintBill,
 }) => {
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [orderType, setOrderType] = useState('takeaway'); // 'takeaway' | 'dinein' | 'order'
+  const [advancePayment, setAdvancePayment] = useState(0);
   const customerDropdownRef = useRef(null);
 
   // Close customer dropdown on outside click
@@ -69,6 +62,12 @@ export const BillingCart = ({
   const totalAmount = taxableAmount + taxAmount;
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Order Type & Conditional Advance Payment calculations
+  const pendingAmount =
+    orderType === 'order' ? Math.max(0, totalAmount - (advancePayment || 0)) : 0;
+  const amountToPayNow =
+    orderType === 'order' ? (advancePayment || 0) : totalAmount;
+
   // Formatted Date & Time in #4E3636
   const formattedDateTime = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -92,7 +91,7 @@ export const BillingCart = ({
   return (
     <aside className="w-[380px] bg-white h-screen flex flex-col justify-between shrink-0 select-none shadow-[-6px_0_24px_rgba(50,30,30,0.05)] border-l border-[#4E3636]/10 relative z-20">
       {/* 1. Header: "New Bill" (Serif font, #321E1E) & "Clear" button (Text #CD1818, trash icon) */}
-      <div className="p-5 pb-3 border-b border-[#4E3636]/10 shrink-0">
+      <div className="p-5 pb-4 border-b border-[#4E3636]/10 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="font-serif text-xl font-bold text-[#321E1E]">
@@ -140,13 +139,13 @@ export const BillingCart = ({
         )}
 
         {/* 2. Customer Info: Dropdown for "Walk-in Customer", Bill No., and Date/Time in #4E3636 */}
-        <div className="mt-3 pt-2.5 border-t border-[#4E3636]/10 space-y-2">
+        <div className="mt-4 pt-3 border-t border-[#4E3636]/10 space-y-2.5">
           {/* Customer Dropdown */}
           <div className="relative" ref={customerDropdownRef}>
             <button
               type="button"
               onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
-              className="w-full flex items-center justify-between px-3 py-1.5 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15 hover:border-[#116D6E] text-left transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-2 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15 hover:border-[#116D6E] text-left transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <User className="w-4 h-4 text-[#116D6E] shrink-0" />
@@ -209,124 +208,64 @@ export const BillingCart = ({
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 3. Three Categories in Billing Type: Takeaway, Dine In, Order */}
-        <div className="mt-3 pt-2.5 border-t border-[#4E3636]/10">
-          <div className="flex items-center justify-between mb-1.5 px-0.5">
-            <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
-              Billing Type
-            </span>
-            <span className="text-[11px] font-semibold text-[#116D6E]">
-              {billingType === 'Dine In'
-                ? `Table Service (${tableNumber})`
-                : billingType === 'Order'
-                ? 'Pre-Order / Advance'
-                : 'Parcel Packaging'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/15">
-            {/* Takeaway */}
-            <button
-              type="button"
-              onClick={() => onSelectBillingType && onSelectBillingType('Takeaway')}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
-                billingType === 'Takeaway'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+      {/* 2.5 Order Type Selector (Above the itemized list) */}
+      <div className="px-5 py-3 border-b border-[#4E3636]/10 bg-white shrink-0">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-[#4E3636] block mb-1.5">
+          Order Type
+        </label>
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#FDFBF7] rounded-lg border border-[#4E3636]/30">
+          <button
+            type="button"
+            onClick={() => setOrderType('takeaway')}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              orderType === 'takeaway'
+                ? 'bg-[#116D6E] text-white shadow-xs'
+                : 'bg-white text-[#321E1E] hover:bg-[#FDFBF7]'
+            }`}
+          >
+            <ShoppingBag
+              className={`w-3.5 h-3.5 ${
+                orderType === 'takeaway' ? 'text-white' : 'text-[#321E1E]'
               }`}
-            >
-              <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
-              <span>Takeaway</span>
-            </button>
+            />
+            <span>Takeaway</span>
+          </button>
 
-            {/* Dine In */}
-            <button
-              type="button"
-              onClick={() => onSelectBillingType && onSelectBillingType('Dine In')}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
-                billingType === 'Dine In'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+          <button
+            type="button"
+            onClick={() => setOrderType('dinein')}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              orderType === 'dinein'
+                ? 'bg-[#116D6E] text-white shadow-xs'
+                : 'bg-white text-[#321E1E] hover:bg-[#FDFBF7]'
+            }`}
+          >
+            <Utensils
+              className={`w-3.5 h-3.5 ${
+                orderType === 'dinein' ? 'text-white' : 'text-[#321E1E]'
               }`}
-            >
-              <UtensilsCrossed className="w-3.5 h-3.5 shrink-0" />
-              <span>Dine In</span>
-            </button>
+            />
+            <span>Dine-in</span>
+          </button>
 
-            {/* Order */}
-            <button
-              type="button"
-              onClick={() => onSelectBillingType && onSelectBillingType('Order')}
-              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
-                billingType === 'Order'
-                  ? 'bg-[#116D6E] text-white shadow-xs'
-                  : 'text-[#321E1E] hover:bg-white hover:text-[#116D6E]'
+          <button
+            type="button"
+            onClick={() => setOrderType('order')}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              orderType === 'order'
+                ? 'bg-[#116D6E] text-white shadow-xs'
+                : 'bg-white text-[#321E1E] hover:bg-[#FDFBF7]'
+            }`}
+          >
+            <Calendar
+              className={`w-3.5 h-3.5 ${
+                orderType === 'order' ? 'text-white' : 'text-[#321E1E]'
               }`}
-            >
-              <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-              <span>Order</span>
-            </button>
-          </div>
-
-          {/* Dine In Sub-options: Table selector */}
-          {billingType === 'Dine In' && (
-            <div className="mt-2 p-2 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 text-xs animate-in fade-in duration-150">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
-                  Select Table:
-                </span>
-                <span className="text-[11px] font-bold text-[#116D6E]">
-                  {tableNumber}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar">
-                {['T-1', 'T-2', 'T-3', 'T-4', 'T-5', 'T-6', 'Counter'].map((tbl) => (
-                  <button
-                    key={tbl}
-                    type="button"
-                    onClick={() => onSelectTableNumber && onSelectTableNumber(tbl)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer shrink-0 ${
-                      tableNumber === tbl
-                        ? 'bg-[#116D6E] text-white shadow-2xs'
-                        : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]'
-                    }`}
-                  >
-                    {tbl}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Order Sub-options: Scheduled Pickup / Delivery & Special Baking Notes */}
-          {billingType === 'Order' && (
-            <div className="mt-2 space-y-1.5 p-2 bg-[#116D6E]/5 rounded-xl border border-[#116D6E]/15 text-xs animate-in fade-in duration-150">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-[#4E3636] uppercase tracking-wider">
-                  Due Time:
-                </span>
-                <select
-                  value={orderDueTime}
-                  onChange={(e) => onSetOrderDueTime && onSetOrderDueTime(e.target.value)}
-                  className="text-[11px] font-bold bg-white text-[#321E1E] rounded-md px-2 py-0.5 border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E]"
-                >
-                  <option value="Today, 06:00 PM">Today, 06:00 PM</option>
-                  <option value="Today, 08:00 PM">Today, 08:00 PM</option>
-                  <option value="Tomorrow, 10:00 AM">Tomorrow, 10:00 AM</option>
-                  <option value="Tomorrow, 04:00 PM">Tomorrow, 04:00 PM</option>
-                  <option value="Advance Booking">Advance Booking</option>
-                </select>
-              </div>
-              <input
-                type="text"
-                value={orderNotes}
-                onChange={(e) => onSetOrderNotes && onSetOrderNotes(e.target.value)}
-                placeholder="Order notes (e.g. Birthday msg, eggless)..."
-                className="w-full bg-white text-[11px] text-[#321E1E] px-2.5 py-1 rounded-md border border-[#4E3636]/20 placeholder-[#4E3636]/50 focus:outline-none focus:border-[#116D6E]"
-              />
-            </div>
-          )}
+            />
+            <span>Order</span>
+          </button>
         </div>
       </div>
 
@@ -454,6 +393,46 @@ export const BillingCart = ({
           </div>
         </div>
 
+        {/* 2. Conditional Advance Payment Section (Only visible if orderType === 'order') */}
+        {orderType === 'order' && (
+          <div className="pt-2.5 border-t border-[#4E3636]/15 space-y-2 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs font-semibold text-[#4E3636]">
+                Advance Payment (₹)
+              </label>
+              <div className="relative w-32">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#4E3636]/60">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max={totalAmount}
+                  value={advancePayment === 0 ? '' : advancePayment}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setAdvancePayment(0);
+                    } else {
+                      const num = Math.max(0, Math.min(totalAmount, parseInt(val, 10) || 0));
+                      setAdvancePayment(num);
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full text-right bg-white text-xs font-bold text-[#321E1E] py-1.5 pl-6 pr-2.5 rounded-lg border border-[#4E3636]/30 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/20 shadow-2xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg bg-[#CD1818]/5 border border-[#CD1818]/15">
+              <span className="text-[#4E3636] font-medium">Pending Amount</span>
+              <span className="font-extrabold text-sm text-[#CD1818]">
+                ₹{pendingAmount.toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Total Amount: Very prominent. Text in #321E1E bold,
             but actual number large and in #CD1818 (Vibrant Crimson) for maximum contrast */}
         <div className="pt-3 border-t border-[#4E3636]/15 flex items-baseline justify-between">
@@ -467,21 +446,94 @@ export const BillingCart = ({
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
-          {/* "Pay Now": Large button, background #CD1818 (Vibrant Crimson), white text, bold. Full width. High contrast drop shadow */}
-          <button
-            type="button"
-            onClick={onPayNow}
-            disabled={cartItems.length === 0}
-            className="w-full py-3.5 px-4 rounded-xl bg-[#CD1818] hover:bg-[#b51414] active:scale-[0.99] text-white text-base font-bold flex items-center justify-center gap-2 shadow-[0_8px_24px_-4px_rgba(205,24,24,0.45)] hover:shadow-[0_12px_28px_-4px_rgba(205,24,24,0.55)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
-          >
-            <CreditCard className="w-5 h-5 text-white" />
-            <span>Pay Now &bull; ₹{totalAmount.toLocaleString('en-IN')}</span>
-          </button>
+          {/* Action Button:
+              If orderType is 'takeaway' or 'dinein': Button text = "Pay Now" (Background: #CD1818, text white).
+              If orderType is 'order': Button text = "Pay Advance & Confirm Order" (Background: #116D6E, text white). */}
+          {orderType === 'order' ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (cartItems.length === 0) return;
+                const orderData = {
+                  items: [...cartItems],
+                  orderType: 'order',
+                  orderTypeLabel: 'Order',
+                  subTotal,
+                  discountAmount,
+                  discountPercent,
+                  taxAmount,
+                  totalAmount,
+                  advancePaid: advancePayment,
+                  pendingAmount,
+                  amountToPayNow,
+                  status: pendingAmount > 0 ? 'Pending Payment' : 'Completed',
+                  timestamp: new Date(),
+                };
+                onPayNow && onPayNow(orderData);
+              }}
+              disabled={cartItems.length === 0}
+              className="w-full py-3.5 px-4 rounded-xl bg-[#116D6E] hover:bg-[#0e5859] active:scale-[0.99] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-[0_8px_24px_-4px_rgba(17,109,110,0.45)] hover:shadow-[0_12px_28px_-4px_rgba(17,109,110,0.55)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
+            >
+              <Calendar className="w-4 h-4 text-white" />
+              <span>Pay Advance &amp; Confirm Order</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (cartItems.length === 0) return;
+                const orderData = {
+                  items: [...cartItems],
+                  orderType,
+                  orderTypeLabel: orderType === 'takeaway' ? 'Takeaway' : 'Dine-in',
+                  subTotal,
+                  discountAmount,
+                  discountPercent,
+                  taxAmount,
+                  totalAmount,
+                  advancePaid: '-',
+                  pendingAmount: 0,
+                  amountToPayNow: totalAmount,
+                  status: 'Completed',
+                  timestamp: new Date(),
+                };
+                onPayNow && onPayNow(orderData);
+              }}
+              disabled={cartItems.length === 0}
+              className="w-full py-3.5 px-4 rounded-xl bg-[#CD1818] hover:bg-[#b51414] active:scale-[0.99] text-white text-base font-bold flex items-center justify-center gap-2 shadow-[0_8px_24px_-4px_rgba(205,24,24,0.45)] hover:shadow-[0_12px_28px_-4px_rgba(205,24,24,0.55)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
+            >
+              <CreditCard className="w-5 h-5 text-white" />
+              <span>Pay Now &bull; ₹{totalAmount.toLocaleString('en-IN')}</span>
+            </button>
+          )}
 
           {/* "Print Bill": Secondary button, background white, border #321E1E, text #321E1E */}
           <button
             type="button"
-            onClick={onPrintBill}
+            onClick={() => {
+              if (cartItems.length === 0) return;
+              const orderData = {
+                items: [...cartItems],
+                orderType,
+                orderTypeLabel:
+                  orderType === 'takeaway'
+                    ? 'Takeaway'
+                    : orderType === 'dinein'
+                    ? 'Dine-in'
+                    : 'Order',
+                subTotal,
+                discountAmount,
+                discountPercent,
+                taxAmount,
+                totalAmount,
+                advancePaid: orderType === 'order' ? advancePayment : '-',
+                pendingAmount,
+                amountToPayNow,
+                status: pendingAmount > 0 ? 'Pending Payment' : 'Completed',
+                timestamp: new Date(),
+              };
+              onPrintBill && onPrintBill(orderData);
+            }}
             disabled={cartItems.length === 0}
             className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-[#FDFBF7] border border-[#321E1E] text-[#321E1E] text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
