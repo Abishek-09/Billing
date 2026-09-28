@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -12,9 +12,14 @@ import {
   X,
   Bell,
   Menu,
-  ShoppingBag
+  ShoppingBag,
+  History,
+  TrendingUp,
+  Tag,
+  CornerDownLeft
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PRODUCTS } from '../data/mockData';
 
 export const TopBar = ({
   searchQuery,
@@ -26,8 +31,120 @@ export const TopBar = ({
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
+  const searchContainerRef = useRef(null);
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
+
+  // Recent Searches for POS
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sweetbite_pos_recent_searches');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return ['Croissant', 'Sourdough', 'Cheesecake', 'Flat White'];
+  });
+
+  const saveSearchTerm = (term) => {
+    const clean = term.trim();
+    if (!clean) return;
+    setRecentSearches((prev) => {
+      const next = [clean, ...prev.filter((s) => s.toLowerCase() !== clean.toLowerCase())].slice(0, 6);
+      try {
+        localStorage.setItem('sweetbite_pos_recent_searches', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const removeRecentSearch = (term, e) => {
+    e?.stopPropagation();
+    setRecentSearches((prev) => {
+      const next = prev.filter((s) => s.toLowerCase() !== term.toLowerCase());
+      try {
+        localStorage.setItem('sweetbite_pos_recent_searches', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const clearAllRecentSearches = (e) => {
+    e?.stopPropagation();
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem('sweetbite_pos_recent_searches');
+    } catch (e) {}
+  };
+
+  const handleSelectSearch = (term) => {
+    setSearchQuery(term);
+    saveSearchTerm(term);
+    setSearchDropdownOpen(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (searchQuery.trim()) {
+        saveSearchTerm(searchQuery);
+      }
+      setSearchDropdownOpen(false);
+    } else if (e.key === 'Escape') {
+      setSearchDropdownOpen(false);
+    }
+  };
+
+  // Popular bakery searches
+  const POPULAR_SEARCHES = ['Croissant', 'Sourdough', 'Tart', 'Baguette', 'Cheesecake', 'Flat White'];
+
+  // Live product search suggestions
+  const liveSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return PRODUCTS.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+    ).slice(0, 5);
+  }, [searchQuery]);
+
+  // Similar searches / Fuzzy suggestions
+  const similarSearches = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+
+    if (liveSuggestions.length > 0) {
+      const matchedCats = new Set(liveSuggestions.map((p) => p.category));
+      return PRODUCTS.filter(
+        (p) => matchedCats.has(p.category) && !p.name.toLowerCase().includes(q)
+      )
+        .slice(0, 4)
+        .map((p) => p.name);
+    }
+
+    const candidates = [];
+    PRODUCTS.forEach((p) => {
+      const pName = p.name.toLowerCase();
+      let score = 0;
+      if (pName.startsWith(q.slice(0, 3))) score += 3;
+      let matches = 0;
+      for (const char of q) {
+        if (pName.includes(char)) matches++;
+      }
+      score += matches / Math.max(q.length, pName.length);
+      if (score >= 1.4) {
+        candidates.push({ name: p.name, score });
+      }
+    });
+
+    return candidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((c) => c.name);
+  }, [searchQuery, liveSuggestions]);
 
   // Live clock
   useEffect(() => {
@@ -41,13 +158,16 @@ export const TopBar = ({
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setProfileOpen(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
-    <header className="h-[72px] bg-[#FDFBF7] border-b border-[#4E3636]/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4 shrink-0 relative z-10">
+    <header className="h-[72px] bg-[#FDFBF7] border-b border-[#4E3636]/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4 shrink-0 relative z-30">
       {/* Mobile Menu Hamburger Button */}
       <button
         type="button"
@@ -58,26 +178,173 @@ export const TopBar = ({
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Search bar with soft border (#4E3636 20% opacity) */}
-      <div className="relative flex-1 max-w-lg min-w-0">
+      {/* Search bar with dropdown (Recent, Suggestions, Similar) */}
+      <div className="relative flex-1 max-w-lg min-w-0" ref={searchContainerRef}>
         <Search className="w-4 h-4 text-[#4E3636] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSearchDropdownOpen(true);
+          }}
+          onFocus={() => setSearchDropdownOpen(true)}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search artisan cakes, sourdough, pastries..."
           className="w-full bg-white text-[#321E1E] text-xs sm:text-sm pl-9 sm:pl-11 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl border border-[#4E3636]/20 placeholder-[#4E3636]/60 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-sm transition-all duration-200"
         />
         {searchQuery ? (
           <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#4E3636]/60 hover:text-[#321E1E] p-1 rounded-md"
+            onClick={() => {
+              setSearchQuery('');
+              setSearchDropdownOpen(true);
+            }}
+            className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#4E3636]/60 hover:text-[#321E1E] p-1 rounded-md cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         ) : (
           <div className="absolute right-3.5 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-[11px] font-medium text-[#4E3636]/50 bg-[#FDFBF7] px-1.5 py-0.5 rounded border border-[#4E3636]/15 pointer-events-none">
             ⌘K
+          </div>
+        )}
+
+        {/* Enhanced Search Dropdown for POS */}
+        {searchDropdownOpen && (
+          <div className="absolute left-0 top-full mt-2 w-full sm:w-[460px] bg-white rounded-2xl shadow-soft-lg border border-[#4E3636]/15 z-50 p-3.5 max-h-[420px] overflow-y-auto space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+            {/* 1. Recent Searches */}
+            {recentSearches.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E]">
+                    <History className="w-3.5 h-3.5 text-[#116D6E]" />
+                    <span>Recent Searches</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearAllRecentSearches}
+                    className="text-[10px] font-semibold text-[#CD1818] hover:underline cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {recentSearches.map((term) => (
+                    <div
+                      key={term}
+                      onClick={() => handleSelectSearch(term)}
+                      className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FDFBF7] border border-[#4E3636]/15 hover:border-[#116D6E] hover:bg-[#116D6E]/5 text-xs text-[#321E1E] transition-all cursor-pointer"
+                    >
+                      <History className="w-3 h-3 text-[#4E3636]/50 group-hover:text-[#116D6E]" />
+                      <span>{term}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => removeRecentSearch(term, e)}
+                        className="text-[#4E3636]/40 hover:text-[#CD1818] p-0.5 rounded transition-colors ml-0.5"
+                        title="Remove"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Live Search Suggestions */}
+            {searchQuery.trim() ? (
+              <div>
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E]">
+                    <Search className="w-3.5 h-3.5 text-[#116D6E]" />
+                    <span>Search Suggestions</span>
+                  </div>
+                  <span className="text-[10px] text-[#4E3636]/60 font-medium">
+                    {liveSuggestions.length} found
+                  </span>
+                </div>
+
+                {liveSuggestions.length > 0 ? (
+                  <div className="space-y-1">
+                    {liveSuggestions.map((prod) => (
+                      <div
+                        key={prod.id}
+                        onClick={() => handleSelectSearch(prod.name)}
+                        className="flex items-center justify-between p-2 rounded-xl hover:bg-[#FDFBF7] transition-colors cursor-pointer group border border-transparent hover:border-[#4E3636]/10"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            className="w-8 h-8 rounded-lg object-cover border border-[#4E3636]/10 shrink-0"
+                          />
+                          <div>
+                            <div className="text-xs font-bold text-[#321E1E] group-hover:text-[#116D6E] transition-colors">
+                              {prod.name}
+                            </div>
+                            <div className="text-[10px] text-[#4E3636]/70 flex items-center gap-1.5">
+                              <span>{prod.category}</span>
+                              <span>&bull;</span>
+                              <span className="font-semibold text-[#116D6E]">₹{prod.price}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <CornerDownLeft className="w-3.5 h-3.5 text-[#4E3636]/30 group-hover:text-[#116D6E] transition-colors" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-2.5 text-center text-xs text-[#4E3636]/70 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10">
+                    No direct match for &quot;{searchQuery}&quot;
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* 3. Similar Searches / Popular Searches */}
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E] pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                {searchQuery.trim() ? (
+                  liveSuggestions.length > 0 ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Similar &amp; Related Delicacies</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-[#116D6E]" />
+                      <span>Did you mean? (Similar Searches)</span>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <TrendingUp className="w-3.5 h-3.5 text-[#116D6E]" />
+                    <span>Popular Bakery Delicacies</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {(searchQuery.trim()
+                  ? similarSearches.length > 0
+                    ? similarSearches
+                    : POPULAR_SEARCHES.slice(0, 4)
+                  : POPULAR_SEARCHES
+                ).map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => handleSelectSearch(term)}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#116D6E]/5 hover:bg-[#116D6E] text-[#116D6E] hover:text-white border border-[#116D6E]/20 text-xs font-medium transition-all cursor-pointer"
+                  >
+                    <Tag className="w-3 h-3 opacity-60" />
+                    <span>{term}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

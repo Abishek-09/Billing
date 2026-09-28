@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus,
   Pencil,
@@ -12,7 +12,11 @@ import {
   Search,
   Filter,
   RotateCcw,
-  ArrowUpDown
+  ArrowUpDown,
+  History,
+  TrendingUp,
+  Tag,
+  CornerDownLeft
 } from 'lucide-react';
 import { ALL_INVENTORY_PRODUCTS } from '../../data/adminMockData';
 
@@ -27,6 +31,134 @@ export const AdminInventory = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All'); // 'All' | 'in_stock' | 'low_stock' | 'out_of_stock'
   const [sortBy, setSortBy] = useState('default'); // 'default' | 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc'
+
+  // Search Enhancement State: Recent Searches, Live Suggestions & Similar Searches
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const searchContainerRef = useRef(null);
+
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sweetbite_inventory_recent_searches');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return ['Croissant', 'Sourdough Bread', 'Cheesecake', 'Tart'];
+  });
+
+  const saveSearchTerm = (term) => {
+    const clean = term.trim();
+    if (!clean) return;
+    setRecentSearches((prev) => {
+      const next = [clean, ...prev.filter((s) => s.toLowerCase() !== clean.toLowerCase())].slice(0, 6);
+      try {
+        localStorage.setItem('sweetbite_inventory_recent_searches', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const removeRecentSearch = (term, e) => {
+    e?.stopPropagation();
+    setRecentSearches((prev) => {
+      const next = prev.filter((s) => s.toLowerCase() !== term.toLowerCase());
+      try {
+        localStorage.setItem('sweetbite_inventory_recent_searches', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const clearAllRecentSearches = (e) => {
+    e?.stopPropagation();
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem('sweetbite_inventory_recent_searches');
+    } catch (e) {}
+  };
+
+  const handleSelectSearch = (term) => {
+    setSearchQuery(term);
+    saveSearchTerm(term);
+    setSearchDropdownOpen(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (searchQuery.trim()) {
+        saveSearchTerm(searchQuery);
+      }
+      setSearchDropdownOpen(false);
+    } else if (e.key === 'Escape') {
+      setSearchDropdownOpen(false);
+    }
+  };
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Popular searches for quick discovery
+  const POPULAR_SEARCHES = ['Croissant', 'Sourdough Bread', 'Pistachio Tart', 'Baguette', 'Cheesecake', 'Cold Brew'];
+
+  // Live matching product suggestions
+  const liveSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q) ||
+          p.id?.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [searchQuery, products]);
+
+  // Similar searches (Related products or fuzzy "Did you mean?")
+  const similarSearches = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+
+    // If matches exist, find products in the same category that are related
+    if (liveSuggestions.length > 0) {
+      const matchedCats = new Set(liveSuggestions.map((p) => p.category));
+      return products
+        .filter((p) => matchedCats.has(p.category) && !p.name.toLowerCase().includes(q))
+        .slice(0, 4)
+        .map((p) => p.name);
+    }
+
+    // If zero matches, calculate phonetic / letter-overlap suggestions ("Did you mean?")
+    const candidates = [];
+    products.forEach((p) => {
+      const pName = p.name.toLowerCase();
+      let score = 0;
+      if (pName.startsWith(q.slice(0, 3))) score += 3;
+      if (p.category?.toLowerCase().startsWith(q.slice(0, 3))) score += 2;
+      let matches = 0;
+      for (const char of q) {
+        if (pName.includes(char)) matches++;
+      }
+      score += matches / Math.max(q.length, pName.length);
+      if (score >= 1.4) {
+        candidates.push({ name: p.name, score });
+      }
+    });
+
+    return candidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((c) => c.name);
+  }, [searchQuery, liveSuggestions, products]);
 
   // Form State for Add / Edit
   const [formData, setFormData] = useState({
@@ -284,25 +416,185 @@ export const AdminInventory = () => {
       {/* Filter and Search Controls Toolbar */}
       <div className="bg-white rounded-xl p-4 shadow-soft border border-[#4E3636]/10 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
+          {/* Search Box with Enhanced Dropdown (Recent, Suggestions, Similar) */}
+          <div className="relative flex-1 max-w-md" ref={searchContainerRef}>
             <Search className="w-4 h-4 text-[#4E3636] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchDropdownOpen(true);
+              }}
+              onFocus={() => setSearchDropdownOpen(true)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Search by product name, category, or ID..."
               className="w-full bg-[#FDFBF7] text-[#321E1E] text-xs pl-10 pr-9 py-2.5 rounded-xl border border-[#4E3636]/20 placeholder-[#4E3636]/50 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 transition-all shadow-xs"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchDropdownOpen(true);
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-[#4E3636]/50 hover:text-[#321E1E] cursor-pointer"
                 title="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            )}
+
+            {/* Enhanced Search Dropdown */}
+            {searchDropdownOpen && (
+              <div className="absolute left-0 top-full mt-2 w-full sm:w-[480px] bg-white rounded-2xl shadow-soft-lg border border-[#4E3636]/15 z-50 p-3.5 max-h-[440px] overflow-y-auto space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+                {/* 1. Recent Searches */}
+                {recentSearches.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E]">
+                        <History className="w-3.5 h-3.5 text-[#116D6E]" />
+                        <span>Recent Searches</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearAllRecentSearches}
+                        className="text-[10px] font-semibold text-[#CD1818] hover:underline cursor-pointer"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {recentSearches.map((term) => (
+                        <div
+                          key={term}
+                          onClick={() => handleSelectSearch(term)}
+                          className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FDFBF7] border border-[#4E3636]/15 hover:border-[#116D6E] hover:bg-[#116D6E]/5 text-xs text-[#321E1E] transition-all cursor-pointer"
+                        >
+                          <History className="w-3 h-3 text-[#4E3636]/50 group-hover:text-[#116D6E]" />
+                          <span>{term}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => removeRecentSearch(term, e)}
+                            className="text-[#4E3636]/40 hover:text-[#CD1818] p-0.5 rounded transition-colors ml-0.5"
+                            title="Remove"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Live Search Suggestions (matching product items) */}
+                {searchQuery.trim() ? (
+                  <div>
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E]">
+                        <Search className="w-3.5 h-3.5 text-[#116D6E]" />
+                        <span>Search Suggestions</span>
+                      </div>
+                      <span className="text-[10px] text-[#4E3636]/60 font-medium">
+                        {liveSuggestions.length} items found
+                      </span>
+                    </div>
+
+                    {liveSuggestions.length > 0 ? (
+                      <div className="space-y-1">
+                        {liveSuggestions.map((prod) => (
+                          <div
+                            key={prod.id}
+                            onClick={() => handleSelectSearch(prod.name)}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-[#FDFBF7] transition-colors cursor-pointer group border border-transparent hover:border-[#4E3636]/10"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={prod.image}
+                                alt={prod.name}
+                                className="w-8 h-8 rounded-lg object-cover border border-[#4E3636]/10 shrink-0"
+                              />
+                              <div>
+                                <div className="text-xs font-bold text-[#321E1E] group-hover:text-[#116D6E] transition-colors">
+                                  {prod.name}
+                                </div>
+                                <div className="text-[10px] text-[#4E3636]/70 flex items-center gap-1.5">
+                                  <span>{prod.category}</span>
+                                  <span>&bull;</span>
+                                  <span className="font-semibold text-[#116D6E]">₹{prod.price}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  prod.stock === 0
+                                    ? 'bg-[#CD1818]/10 text-[#CD1818]'
+                                    : prod.stock < 10
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-emerald-50 text-emerald-800'
+                                }`}
+                              >
+                                {prod.stock === 0 ? 'Out of Stock' : `${prod.stock} left`}
+                              </span>
+                              <CornerDownLeft className="w-3 h-3 text-[#4E3636]/30 group-hover:text-[#116D6E] transition-colors" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 text-center text-xs text-[#4E3636]/70 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10">
+                        No direct match for &quot;{searchQuery}&quot;
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* 3. Similar Searches / Popular Searches */}
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#321E1E] pb-1.5 border-b border-[#4E3636]/10 mb-2">
+                    {searchQuery.trim() ? (
+                      liveSuggestions.length > 0 ? (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Similar &amp; Related Searches</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-[#116D6E]" />
+                          <span>Did you mean? (Similar Searches)</span>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <TrendingUp className="w-3.5 h-3.5 text-[#116D6E]" />
+                        <span>Popular Bakery Searches</span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(searchQuery.trim()
+                      ? similarSearches.length > 0
+                        ? similarSearches
+                        : POPULAR_SEARCHES.slice(0, 4)
+                      : POPULAR_SEARCHES
+                    ).map((term) => (
+                      <button
+                        key={term}
+                        type="button"
+                        onClick={() => handleSelectSearch(term)}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#116D6E]/5 hover:bg-[#116D6E] text-[#116D6E] hover:text-white border border-[#116D6E]/20 text-xs font-medium transition-all cursor-pointer"
+                      >
+                        <Tag className="w-3 h-3 opacity-60" />
+                        <span>{term}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
