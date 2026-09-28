@@ -5,6 +5,7 @@ import {
   Tags,
   ShoppingBag,
   Sparkles,
+  X
 } from 'lucide-react';
 import SidebarIllustration from './SidebarIllustration';
 
@@ -15,26 +16,50 @@ const NAV_ITEMS = [
   { id: 'orders', label: 'Orders', icon: ShoppingBag },
 ];
 
-export const Sidebar = ({ activeTab, onSelectTab }) => {
+export const Sidebar = ({ activeTab, onSelectTab, mobileOpen = false, onCloseMobile }) => {
   return (
-    <aside className="w-[240px] bg-[#116D6E] text-white flex flex-col justify-between h-screen shrink-0 select-none shadow-[4px_0_24px_rgba(17,109,110,0.15)] relative z-20">
-      {/* Top Header & Logo */}
-      <div className="flex flex-col">
-        <div className="px-6 py-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center shadow-inner">
-              <Sparkles className="w-5 h-5 text-white" />
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-[#321E1E]/60 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`w-[240px] bg-[#116D6E] text-white flex flex-col justify-between h-screen shrink-0 select-none shadow-[4px_0_24px_rgba(17,109,110,0.15)] z-50 transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 lg:static lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Top Header & Logo */}
+        <div className="flex flex-col">
+          <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center shadow-inner">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="font-serif text-2xl font-bold tracking-tight text-white leading-none">
+                  SweetBite
+                </h1>
+                <p className="text-[10px] uppercase tracking-widest text-white/70 font-sans mt-1">
+                  Artisan Bakery POS
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight text-white leading-none">
-                SweetBite
-              </h1>
-              <p className="text-[10px] uppercase tracking-widest text-white/70 font-sans mt-1">
-                Artisan Bakery POS
-              </p>
-            </div>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="lg:hidden p-1.5 rounded-xl hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Close navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </div>
 
         {/* Navigation Links */}
         <nav className="px-3 py-4 space-y-1.5">
@@ -45,7 +70,10 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectTab(item.id)}
+                onClick={() => {
+                  onSelectTab(item.id);
+                  onCloseMobile?.();
+                }}
                 className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left cursor-pointer group relative ${
                   isActive
                     ? 'bg-white/10 text-white font-semibold border-l-4 border-white shadow-[0_0_15px_rgba(255,255,255,0.2)]'
@@ -87,6 +115,7 @@ export const Sidebar = ({ activeTab, onSelectTab }) => {
         </span>
       </div>
     </aside>
+  </>
   );
 };
 

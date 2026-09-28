@@ -10,11 +10,19 @@ import {
   Sparkles,
   Clock,
   X,
-  Bell
+  Bell,
+  Menu,
+  ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export const TopBar = ({ searchQuery, setSearchQuery }) => {
+export const TopBar = ({
+  searchQuery,
+  setSearchQuery,
+  onOpenMobileNav,
+  onOpenMobileCart,
+  cartItemsCount = 0,
+}) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
@@ -39,33 +47,60 @@ export const TopBar = ({ searchQuery, setSearchQuery }) => {
   }, []);
 
   return (
-    <header className="h-[72px] bg-[#FDFBF7] border-b border-[#4E3636]/10 px-8 flex items-center justify-between gap-4 shrink-0 relative z-10">
+    <header className="h-[72px] bg-[#FDFBF7] border-b border-[#4E3636]/10 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4 shrink-0 relative z-10">
+      {/* Mobile Menu Hamburger Button */}
+      <button
+        type="button"
+        onClick={onOpenMobileNav}
+        className="lg:hidden p-2 rounded-xl bg-white border border-[#4E3636]/15 text-[#321E1E] hover:bg-[#116D6E]/10 hover:text-[#116D6E] transition-colors cursor-pointer shrink-0"
+        title="Open navigation menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Search bar with soft border (#4E3636 20% opacity) */}
-      <div className="relative flex-1 max-w-lg">
-        <Search className="w-4 h-4 text-[#4E3636] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="relative flex-1 max-w-lg min-w-0">
+        <Search className="w-4 h-4 text-[#4E3636] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search artisan cakes, sourdough, pastries, cookies..."
-          className="w-full bg-white text-[#321E1E] text-sm pl-11 pr-10 py-2.5 rounded-xl border border-[#4E3636]/20 placeholder-[#4E3636]/60 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-sm transition-all duration-200"
+          placeholder="Search artisan cakes, sourdough, pastries..."
+          className="w-full bg-white text-[#321E1E] text-xs sm:text-sm pl-9 sm:pl-11 pr-8 sm:pr-10 py-2 sm:py-2.5 rounded-xl border border-[#4E3636]/20 placeholder-[#4E3636]/60 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-sm transition-all duration-200"
         />
         {searchQuery ? (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E3636]/60 hover:text-[#321E1E] p-1 rounded-md"
+            className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-[#4E3636]/60 hover:text-[#321E1E] p-1 rounded-md"
           >
             <X className="w-4 h-4" />
           </button>
         ) : (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 text-[11px] font-medium text-[#4E3636]/50 bg-[#FDFBF7] px-1.5 py-0.5 rounded border border-[#4E3636]/15 pointer-events-none">
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-[11px] font-medium text-[#4E3636]/50 bg-[#FDFBF7] px-1.5 py-0.5 rounded border border-[#4E3636]/15 pointer-events-none">
             ⌘K
           </div>
         )}
       </div>
 
-      {/* Right side: Live Time & Admin profile dropdown */}
-      <div className="flex items-center gap-5">
+      {/* Right side: Live Time, Mobile Cart Trigger, & Admin profile dropdown */}
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        {/* Mobile Cart Trigger Button */}
+        {onOpenMobileCart && (
+          <button
+            type="button"
+            onClick={onOpenMobileCart}
+            className="lg:hidden relative p-2 rounded-xl bg-white border border-[#4E3636]/15 text-[#116D6E] hover:bg-[#116D6E]/10 transition-colors cursor-pointer shrink-0"
+            title="View current bill"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#CD1818] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                {cartItemsCount}
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Subtle Live Clock */}
         <div className="hidden lg:flex items-center gap-2 text-xs text-[#4E3636] bg-white px-3 py-1.5 rounded-lg border border-[#4E3636]/15 shadow-xs">
           <Clock className="w-3.5 h-3.5 text-[#116D6E]" />
@@ -80,7 +115,7 @@ export const TopBar = ({ searchQuery, setSearchQuery }) => {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-3 p-1.5 pr-3 rounded-xl hover:bg-white border border-transparent hover:border-[#4E3636]/15 transition-all cursor-pointer select-none"
+            className="flex items-center gap-2 sm:gap-3 p-1 sm:p-1.5 sm:pr-3 rounded-xl hover:bg-white border border-transparent hover:border-[#4E3636]/15 transition-all cursor-pointer select-none"
           >
             <div className="relative">
               <img

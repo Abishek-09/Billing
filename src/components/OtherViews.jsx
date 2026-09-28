@@ -17,9 +17,9 @@ import {
 import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
 
 export const ProductsView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
+  <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#FDFBF7]">
     {/* Page Header */}
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Product Catalog Management</h2>
         <p className="text-xs text-[#4E3636] mt-1">Manage active menu items, pricing, inventory thresholds, and categories</p>
@@ -87,8 +87,8 @@ export { OrdersView } from './OrdersView';
 export { CategoriesView } from './CategoriesView';
 
 export const CustomersView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
-    <div className="flex items-center justify-between mb-6">
+  <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#FDFBF7]">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Sweet Club &bull; Customer Directory</h2>
         <p className="text-xs text-[#4E3636] mt-1">Customer profiles, VIP club tiers, loyalty points, and purchase frequency</p>
@@ -126,8 +126,8 @@ export const CustomersView = ({ onBackToBilling }) => (
 );
 
 export const InventoryView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
-    <div className="flex items-center justify-between mb-6">
+  <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#FDFBF7]">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Raw Material &amp; Ingredient Stock</h2>
         <p className="text-xs text-[#4E3636] mt-1">Flour, cultured butter, Belgian cocoa, Madagascar vanilla, yeast, and packaging</p>
@@ -158,8 +158,8 @@ export const InventoryView = ({ onBackToBilling }) => (
 );
 
 export const ReportsView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
-    <div className="flex items-center justify-between mb-6">
+  <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#FDFBF7]">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Daily Sales &amp; Revenue Analytics</h2>
         <p className="text-xs text-[#4E3636] mt-1">Shift performance, top bakery categories, payment method breakdowns</p>
@@ -193,8 +193,8 @@ export const ReportsView = ({ onBackToBilling }) => (
 );
 
 export const SettingsView = ({ onBackToBilling }) => (
-  <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
-    <div className="flex items-center justify-between mb-6">
+  <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-[#FDFBF7]">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">POS &amp; Bakery Settings</h2>
         <p className="text-xs text-[#4E3636] mt-1">Store details, thermal printer configuration, taxes &amp; currency setup</p>

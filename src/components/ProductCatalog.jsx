@@ -12,12 +12,16 @@ export const ProductCatalog = ({
   setSearchQuery,
   onAddToCart,
   cartItems,
+  onOpenMobileNav,
+  onOpenMobileCart,
 }) => {
   // Create cart quantity lookup map
   const cartQuantityMap = cartItems.reduce((acc, item) => {
     acc[item.id] = item.quantity;
     return acc;
   }, {});
+
+  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   // Filter products by category and search query
   const filteredProducts = products.filter((prod) => {
@@ -32,15 +36,21 @@ export const ProductCatalog = ({
   });
 
   return (
-    <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FDFBF7] relative">
+    <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#FDFBF7] relative min-w-0">
       {/* Top Bar: Search bar & Admin profile */}
-      <TopBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <TopBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onOpenMobileNav={onOpenMobileNav}
+        onOpenMobileCart={onOpenMobileCart}
+        cartItemsCount={totalCartCount}
+      />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden px-8 py-5">
+      <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 lg:px-8 py-3 sm:py-5">
         {/* Category Filters Bar */}
-        <div className="flex items-center justify-between gap-4 mb-5 shrink-0">
-          <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none py-1">
+        <div className="flex items-center justify-between gap-4 mb-3 sm:mb-5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto scrollbar-none py-1">
             {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat.id;
 
@@ -48,7 +58,7 @@ export const ProductCatalog = ({
                 <button
                   key={cat.id}
                   onClick={() => onSelectCategory(cat.id)}
-                  className={`px-5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer shadow-xs ${
+                  className={`px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer shadow-xs ${
                     isActive
                       ? 'bg-[#116D6E] text-white shadow-teal'
                       : 'bg-white text-[#321E1E] border border-[#4E3636]/15 hover:border-[#116D6E]/50 hover:bg-[#FDFBF7]'
@@ -65,10 +75,10 @@ export const ProductCatalog = ({
           </div>
         </div>
 
-        {/* Product Grid: 4 columns */}
-        <div className="flex-1 overflow-y-auto pr-1 pb-8">
+        {/* Product Grid: 2 columns on mobile, 3 on md, 4 on xl */}
+        <div className="flex-1 overflow-y-auto pr-1 pb-24 lg:pb-8">
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}

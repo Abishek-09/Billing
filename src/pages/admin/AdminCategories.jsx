@@ -195,7 +195,7 @@ export const AdminCategories = () => {
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-[#4E3636]/15 shadow-soft">
           <div className="flex items-center justify-between text-[#4E3636]">
             <span className="text-xs font-semibold">Total Categories</span>

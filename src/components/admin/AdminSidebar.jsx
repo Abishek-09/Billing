@@ -10,7 +10,8 @@ import {
   Sparkles,
   ArrowLeftRight,
   ShieldCheck,
-  Store
+  Store,
+  X
 } from 'lucide-react';
 import { NavLink, Link } from 'react-router-dom';
 
@@ -24,28 +25,52 @@ const ADMIN_NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
-export const AdminSidebar = () => {
+export const AdminSidebar = ({ mobileOpen = false, onCloseMobile }) => {
   return (
-    <aside className="w-[240px] bg-[#116D6E] text-white flex flex-col justify-between h-screen shrink-0 select-none shadow-[4px_0_24px_rgba(17,109,110,0.18)] relative z-20">
-      {/* Top Header & Branding */}
-      <div>
-        <div className="px-6 py-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center shadow-inner">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight text-white leading-none">
-                SweetBite
-              </h1>
-              {/* Subtle badge reading "Admin Portal" in #FDFBF7 */}
-              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 border border-white/20 text-[#FDFBF7] text-[10px] font-semibold tracking-wider uppercase">
-                <ShieldCheck className="w-3 h-3 text-[#FDFBF7]" />
-                <span>Admin Portal</span>
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-[#321E1E]/60 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`w-[240px] bg-[#116D6E] text-white flex flex-col justify-between h-screen shrink-0 select-none shadow-[4px_0_24px_rgba(17,109,110,0.18)] z-50 transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 lg:static lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Top Header & Branding */}
+        <div>
+          <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-xs border border-white/20 flex items-center justify-center shadow-inner">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="font-serif text-2xl font-bold tracking-tight text-white leading-none">
+                  SweetBite
+                </h1>
+                {/* Subtle badge reading "Admin Portal" in #FDFBF7 */}
+                <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 border border-white/20 text-[#FDFBF7] text-[10px] font-semibold tracking-wider uppercase">
+                  <ShieldCheck className="w-3 h-3 text-[#FDFBF7]" />
+                  <span>Admin Portal</span>
+                </div>
               </div>
             </div>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="lg:hidden p-1.5 rounded-xl hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Close navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </div>
 
         {/* Navigation Links */}
         <nav className="px-3 py-5 space-y-1.5">
@@ -57,6 +82,7 @@ export const AdminSidebar = () => {
                 key={item.id}
                 to={item.path}
                 end={item.end}
+                onClick={onCloseMobile}
                 className={({ isActive }) =>
                   `w-full flex items-center gap-3.5 px-3.5 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left cursor-pointer group relative ${
                     isActive
@@ -96,6 +122,7 @@ export const AdminSidebar = () => {
       <div className="p-4 border-t border-white/10 space-y-3">
         <Link
           to="/"
+          onClick={onCloseMobile}
           className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-semibold transition-all group"
         >
           <div className="flex items-center gap-2">
@@ -115,6 +142,7 @@ export const AdminSidebar = () => {
         </div>
       </div>
     </aside>
+  </>
   );
 };
 

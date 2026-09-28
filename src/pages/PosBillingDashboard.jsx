@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ShoppingBag, ArrowRight } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import ProductCatalog from '../components/ProductCatalog';
 import BillingCart from '../components/BillingCart';
@@ -16,6 +17,8 @@ export function PosBillingDashboard() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('billing');
   const [currentOrderMeta, setCurrentOrderMeta] = useState(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   // Search & Category Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -310,10 +313,17 @@ export function PosBillingDashboard() {
   const currentTaxable = Math.max(0, currentSubTotal - currentDiscountAmount);
   const currentTotalAmount = currentTaxable + Math.round(currentTaxable * 0.05);
 
+  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#FDFBF7] text-[#321E1E]">
-      {/* Column 1: Left Sidebar (Navigation) - Width: 240px */}
-      <Sidebar activeTab={activeTab} onSelectTab={setActiveTab} />
+    <div className="flex h-screen w-screen overflow-hidden bg-[#FDFBF7] text-[#321E1E] relative">
+      {/* Column 1: Left Sidebar (Navigation) - Width: 240px on desktop, drawer on mobile */}
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        mobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
+      />
 
       {/* Main Switcher based on Active Tab */}
       {activeTab === 'billing' ? (
@@ -327,9 +337,11 @@ export function PosBillingDashboard() {
             setSearchQuery={setSearchQuery}
             onAddToCart={handleAddToCart}
             cartItems={cartItems}
+            onOpenMobileNav={() => setIsMobileNavOpen(true)}
+            onOpenMobileCart={() => setIsMobileCartOpen(true)}
           />
 
-          {/* Column 3: Right Sidebar (Current Bill / Cart) - Width: 380px */}
+          {/* Column 3: Right Sidebar (Current Bill / Cart) - Width: 380px on desktop, drawer on mobile */}
           <BillingCart
             cartItems={cartItems}
             onUpdateQuantity={handleUpdateQuantity}
@@ -342,6 +354,8 @@ export function PosBillingDashboard() {
             setDiscountPercent={setDiscountPercent}
             onPayNow={handleOpenPayNow}
             onPrintBill={handleOpenPrintBill}
+            mobileOpen={isMobileCartOpen}
+            onCloseMobile={() => setIsMobileCartOpen(false)}
           />
         </>
       ) : activeTab === 'products' ? (
@@ -362,6 +376,43 @@ export function PosBillingDashboard() {
           onCollectBalance={handleCollectOrderBalance}
         />
       ) : null}
+
+      {/* Floating Mobile Cart Summary Bar on screens < lg */}
+      {activeTab === 'billing' && (
+        <div className="fixed bottom-0 inset-x-0 p-3 bg-white/95 backdrop-blur-md border-t border-[#4E3636]/15 shadow-[0_-4px_20px_rgba(50,30,30,0.08)] z-30 lg:hidden flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
+          <button
+            type="button"
+            onClick={() => setIsMobileCartOpen(true)}
+            className="flex items-center gap-2.5 cursor-pointer select-none text-left"
+          >
+            <div className="relative w-10 h-10 rounded-xl bg-[#116D6E]/10 flex items-center justify-center text-[#116D6E] shrink-0">
+              <ShoppingBag className="w-5 h-5" />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#CD1818] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                  {totalCartCount}
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-[#321E1E]">
+                {totalCartCount} {totalCartCount === 1 ? 'item' : 'items'} in bill
+              </div>
+              <div className="text-sm font-extrabold text-[#CD1818]">
+                ₹{currentTotalAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsMobileCartOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-[#116D6E] hover:bg-[#0e5859] active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-teal transition-all cursor-pointer shrink-0"
+          >
+            <span>View Bill &amp; Pay</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Payment Modal */}
       <PaymentModal

@@ -13,7 +13,8 @@ import {
   CreditCard,
   User,
   Calendar,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { CUSTOMERS } from '../data/mockData';
 
@@ -29,6 +30,8 @@ export const BillingCart = ({
   setDiscountPercent,
   onPayNow,
   onPrintBill,
+  mobileOpen = false,
+  onCloseMobile,
 }) => {
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -89,31 +92,53 @@ export const BillingCart = ({
   };
 
   return (
-    <aside className="w-[380px] bg-white h-screen flex flex-col justify-between shrink-0 select-none shadow-[-6px_0_24px_rgba(50,30,30,0.05)] border-l border-[#4E3636]/10 relative z-20">
-      {/* 1. Header: "New Bill" (Serif font, #321E1E) & "Clear" button (Text #CD1818, trash icon) */}
-      <div className="p-5 pb-4 border-b border-[#4E3636]/10 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="font-serif text-xl font-bold text-[#321E1E]">
-              New Bill
-            </h2>
-            {totalItemsCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E] text-xs font-bold">
-                {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}
-              </span>
-            )}
-          </div>
+    <>
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={onCloseMobile}
+          className="fixed inset-0 bg-[#321E1E]/60 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
+          aria-hidden="true"
+        />
+      )}
 
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={cartItems.length === 0}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#CD1818] hover:text-[#b51414] transition-colors p-1.5 rounded-lg hover:bg-[#CD1818]/5 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear</span>
-          </button>
-        </div>
+      <aside
+        className={`w-full sm:w-[380px] bg-white h-screen flex flex-col justify-between shrink-0 select-none shadow-[-6px_0_24px_rgba(50,30,30,0.05)] border-l border-[#4E3636]/10 z-50 transition-transform duration-300 ease-in-out fixed inset-y-0 right-0 lg:static lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0 flex' : 'translate-x-full hidden lg:flex'
+        }`}
+      >
+        {/* 1. Header: "New Bill" (Serif font, #321E1E) & "Clear" button (Text #CD1818, trash icon) */}
+        <div className="p-4 sm:p-5 pb-4 border-b border-[#4E3636]/10 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onCloseMobile}
+                className="lg:hidden p-1.5 rounded-lg hover:bg-[#4E3636]/10 text-[#4E3636] transition-colors cursor-pointer mr-1"
+                title="Close bill drawer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="font-serif text-xl font-bold text-[#321E1E]">
+                New Bill
+              </h2>
+              {totalItemsCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E] text-xs font-bold">
+                  {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={cartItems.length === 0}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#CD1818] hover:text-[#b51414] transition-colors p-1.5 rounded-lg hover:bg-[#CD1818]/5 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          </div>
 
         {/* Clear Confirmation Prompt */}
         {showClearConfirm && (
@@ -482,6 +507,7 @@ export const BillingCart = ({
               type="button"
               onClick={() => {
                 if (cartItems.length === 0) return;
+                onCloseMobile?.();
                 const orderData = {
                   items: [...cartItems],
                   orderType,
@@ -512,6 +538,7 @@ export const BillingCart = ({
             type="button"
             onClick={() => {
               if (cartItems.length === 0) return;
+              onCloseMobile?.();
               const orderData = {
                 items: [...cartItems],
                 orderType,
@@ -543,6 +570,7 @@ export const BillingCart = ({
         </div>
       </div>
     </aside>
+  </>
   );
 };
 
