@@ -144,7 +144,7 @@ export const PaymentModal = ({
                     value={custName}
                     onChange={(e) => setCustName(e.target.value)}
                     placeholder="e.g. Elena Rostova"
-                    className="w-full bg-white text-xs text-[#321E1E] font-medium pl-8 pr-3 py-2 rounded-lg border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-2xs placeholder-[#4E3636]/40"
+                    className="w-full bg-white text-xs text-[#321E1E] font-medium pl-9 pr-3 py-2 rounded-lg border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-2xs placeholder-[#4E3636]/40"
                   />
                 </div>
               </div>
@@ -161,7 +161,7 @@ export const PaymentModal = ({
                     value={custPhone}
                     onChange={(e) => setCustPhone(e.target.value)}
                     placeholder="+91 98XXX XXXXX"
-                    className="w-full bg-white text-xs text-[#321E1E] font-medium pl-8 pr-3 py-2 rounded-lg border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-2xs placeholder-[#4E3636]/40"
+                    className="w-full bg-white text-xs text-[#321E1E] font-medium pl-9 pr-3 py-2 rounded-lg border border-[#4E3636]/20 focus:outline-none focus:border-[#116D6E] focus:ring-2 focus:ring-[#116D6E]/15 shadow-2xs placeholder-[#4E3636]/40"
                   />
                 </div>
               </div>

@@ -58,7 +58,7 @@ export const AdminSettings = () => {
 
       {/* Tabbed Interface: Horizontal tabs for "Store Info", "Tax & Billing", "Receipt Design", "User Management"
           Active tab has #116D6E text and a bottom border */}
-      <div className="flex items-center gap-8 border-b border-[#4E3636]/15">
+      <div className="flex items-center gap-4 sm:gap-8 border-b border-[#4E3636]/15 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -77,9 +77,9 @@ export const AdminSettings = () => {
         })}
       </div>
 
-      {/* Tab 1: Store Info Form (White card, rounded-xl, soft shadow, padding-8) */}
+      {/* Tab 1: Store Info Form (White card, rounded-xl, soft shadow, responsive padding) */}
       {activeTab === 'Store Info' && (
-        <form onSubmit={handleSave} className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-8 space-y-6">
+        <form onSubmit={handleSave} className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-5 sm:p-8 space-y-6">
           <div className="border-b border-[#4E3636]/10 pb-4">
             <h3 className="font-serif text-lg font-bold text-[#321E1E]">
               Store &amp; Branch Identity
@@ -147,7 +147,7 @@ export const AdminSettings = () => {
 
       {/* Tab 2: Tax & Billing Form */}
       {activeTab === 'Tax & Billing' && (
-        <form onSubmit={handleSave} className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-8 space-y-6">
+        <form onSubmit={handleSave} className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-5 sm:p-8 space-y-6">
           <div className="border-b border-[#4E3636]/10 pb-4">
             <h3 className="font-serif text-lg font-bold text-[#321E1E]">
               Tax Compliance &amp; Invoice Numbering
@@ -268,14 +268,14 @@ export const AdminSettings = () => {
 
       {/* Tab 3: Receipt Design */}
       {activeTab === 'Receipt Design' && (
-        <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-8 space-y-4 text-xs">
+        <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-5 sm:p-8 space-y-4 text-xs">
           <h3 className="font-serif text-lg font-bold text-[#321E1E]">
             Thermal Receipt Template (80mm)
           </h3>
           <p className="text-[#4E3636]">
             Configure customized store header notes, legal FSSAI disclosures, and custom QR codes printed on physical slips.
           </p>
-          <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div>
               <label className="block font-bold text-[#321E1E] mb-1">Receipt Header Tagline</label>
               <input type="text" defaultValue="Freshly Baked Happiness" className="w-full p-2.5 rounded-xl border border-[#4E3636]/25" />
@@ -290,7 +290,7 @@ export const AdminSettings = () => {
 
       {/* Tab 4: User Management */}
       {activeTab === 'User Management' && (
-        <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-8 space-y-4 text-xs">
+        <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 p-5 sm:p-8 space-y-4 text-xs">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-serif text-lg font-bold text-[#321E1E]">

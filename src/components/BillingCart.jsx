@@ -50,7 +50,11 @@ export const BillingCart = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Live Calculations
@@ -479,6 +483,7 @@ export const BillingCart = ({
               type="button"
               onClick={() => {
                 if (cartItems.length === 0) return;
+                onCloseMobile?.();
                 const orderData = {
                   items: [...cartItems],
                   orderType: 'order',

@@ -44,6 +44,7 @@ export const ProductCatalog = ({
         onOpenMobileNav={onOpenMobileNav}
         onOpenMobileCart={onOpenMobileCart}
         cartItemsCount={totalCartCount}
+        onSelectCategory={onSelectCategory}
       />
 
       {/* Main Content Area */}
@@ -97,15 +98,25 @@ export const ProductCatalog = ({
               <p className="text-xs text-[#4E3636] mt-1 max-w-sm">
                 We couldn&apos;t find anything matching &quot;{searchQuery}&quot; in the &quot;{selectedCategory}&quot; category.
               </p>
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  onSelectCategory('All');
-                }}
-                className="mt-4 px-4 py-2 bg-[#116D6E] text-white rounded-lg text-xs font-semibold hover:bg-[#0e5859] transition-colors"
-              >
-                Reset Filters
-              </button>
+              <div className="flex items-center gap-2 mt-4">
+                {selectedCategory !== 'All' && (
+                  <button
+                    onClick={() => onSelectCategory('All')}
+                    className="px-4 py-2 bg-[#116D6E] text-white rounded-lg text-xs font-semibold hover:bg-[#0e5859] transition-colors cursor-pointer shadow-xs"
+                  >
+                    Search in All Categories
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    onSelectCategory('All');
+                  }}
+                  className="px-4 py-2 bg-white text-[#321E1E] border border-[#4E3636]/20 rounded-lg text-xs font-semibold hover:bg-[#FDFBF7] transition-colors cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -783,19 +783,19 @@ export const AdminReports = () => {
 
         {/* View Mode 1: Product Profitability Matrix with Expandable Today's Bills */}
         {matrixViewMode === 'products' && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
                 <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
-                  <th className="py-3 px-5 font-bold uppercase tracking-wider">Rank</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Product Name</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Category</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Selling Price</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Unit Cost (COGS)</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Margin %</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Today&apos;s Volume</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Today&apos;s Gross Profit</th>
-                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center">Customer Bills</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider bg-[#FDFBF7]">Rank</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Product Name</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Category</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Selling Price</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Unit Cost (COGS)</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Margin %</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Today&apos;s Volume</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Today&apos;s Gross Profit</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center bg-[#FDFBF7]">Customer Bills</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#4E3636]/10">
@@ -977,18 +977,18 @@ export const AdminReports = () => {
 
         {/* View Mode 2: All Today's Bills Ledger with 1-Click View & Download for Every Sale */}
         {matrixViewMode === 'bills' && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
                 <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
-                  <th className="py-3 px-5 font-bold uppercase tracking-wider">Bill #</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Date &amp; Time</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Customer</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Items Purchased</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Order Type</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Amount</th>
-                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-center">Tender</th>
-                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center">Slip Actions</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider bg-[#FDFBF7]">Bill #</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Date &amp; Time</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Customer</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Items Purchased</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider bg-[#FDFBF7]">Order Type</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right bg-[#FDFBF7]">Amount</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-center bg-[#FDFBF7]">Tender</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center bg-[#FDFBF7]">Slip Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#4E3636]/10">

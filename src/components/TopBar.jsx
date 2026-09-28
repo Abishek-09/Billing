@@ -27,6 +27,7 @@ export const TopBar = ({
   onOpenMobileNav,
   onOpenMobileCart,
   cartItemsCount = 0,
+  onSelectCategory,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -83,6 +84,7 @@ export const TopBar = ({
     setSearchQuery(term);
     saveSearchTerm(term);
     setSearchDropdownOpen(false);
+    onSelectCategory?.('All');
   };
 
   const handleSearchKeyDown = (e) => {
@@ -163,7 +165,11 @@ export const TopBar = ({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   return (
