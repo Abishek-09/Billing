@@ -324,17 +324,17 @@ export const AdminCategories = () => {
       {/* Main Content: Table or Grid */}
       {viewMode === 'table' ? (
         <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/15 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7]/60 text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-5">Category Name</th>
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4">Menu Items</th>
-                  <th className="py-3 px-4">GST Tax Rate</th>
-                  <th className="py-3 px-4">Sales Share</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
+              <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
+                <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-5 bg-[#FDFBF7]">Category Name</th>
+                  <th className="py-3 px-4 bg-[#FDFBF7]">Description</th>
+                  <th className="py-3 px-4 bg-[#FDFBF7]">Menu Items</th>
+                  <th className="py-3 px-4 bg-[#FDFBF7]">GST Tax Rate</th>
+                  <th className="py-3 px-4 bg-[#FDFBF7]">Sales Share</th>
+                  <th className="py-3 px-4 bg-[#FDFBF7]">Status</th>
+                  <th className="py-3 px-5 text-right bg-[#FDFBF7]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#4E3636]/10">

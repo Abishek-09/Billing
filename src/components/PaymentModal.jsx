@@ -22,20 +22,24 @@ export const PaymentModal = ({
   fullTotalAmount,
   orderType = 'Takeaway',
   pendingAmount = 0,
-  customerName = 'Walk-in Customer',
+  customerName = '',
   customerPhone = '',
   billNumber,
   onPaymentSuccess,
 }) => {
   const [method, setMethod] = useState('cash'); // 'cash' | 'upi' | 'card' | 'split'
   const [tenderedAmount, setTenderedAmount] = useState('');
-  const [custName, setCustName] = useState(customerName || 'Walk-in Customer');
+  const [custName, setCustName] = useState(
+    customerName && customerName !== 'Walk-in Customer' ? customerName : ''
+  );
   const [custPhone, setCustPhone] = useState(customerPhone || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentDone, setPaymentDone] = useState(false);
 
   useEffect(() => {
-    setCustName(customerName || 'Walk-in Customer');
+    setCustName(
+      customerName && customerName !== 'Walk-in Customer' ? customerName : ''
+    );
     setCustPhone(customerPhone || '');
   }, [customerName, customerPhone, isOpen]);
 
@@ -113,8 +117,8 @@ export const PaymentModal = ({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4 overflow-y-auto">
+        {/* Scrollable Content Body */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Customer Details: Name & Mobile Number */}
           <div className="bg-[#FDFBF7] p-4 rounded-xl border border-[#4E3636]/15 space-y-3">
             <div className="flex items-center justify-between">
@@ -334,8 +338,10 @@ export const PaymentModal = ({
               </div>
             </div>
           )}
+        </div>
 
-          {/* Confirm Button */}
+        {/* Static Footer with Pinned Confirm Payment Button */}
+        <div className="p-4 px-6 bg-white border-t border-[#4E3636]/10 shrink-0">
           <button
             onClick={handleConfirmPayment}
             disabled={isProcessing || paymentDone}

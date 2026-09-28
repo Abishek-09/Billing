@@ -110,19 +110,6 @@ export const TopBar = ({ searchQuery, setSearchQuery }) => {
               </div>
 
               <div className="px-1.5 space-y-0.5">
-                {currentUser?.role === 'admin' ? (
-                  <Link
-                    to="/admin"
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#116D6E] bg-[#116D6E]/10 hover:bg-[#116D6E]/15 rounded-lg transition-colors text-left font-semibold"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#116D6E]" />
-                    <span>Launch Admin Portal &rarr;</span>
-                  </Link>
-                ) : (
-                  <div className="px-3 py-1.5 text-[11px] text-[#4E3636] bg-[#FDFBF7] rounded-lg font-medium">
-                    Logged in as Cashier
-                  </div>
-                )}
                 <button
                   onClick={() => setProfileOpen(false)}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#321E1E] hover:bg-[#FDFBF7] hover:text-[#116D6E] rounded-lg transition-colors text-left"

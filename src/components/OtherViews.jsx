@@ -18,6 +18,7 @@ import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
 
 export const ProductsView = ({ onBackToBilling }) => (
   <div className="flex-1 p-8 overflow-y-auto bg-[#FDFBF7]">
+    {/* Page Header */}
     <div className="flex items-center justify-between mb-6">
       <div>
         <h2 className="font-serif text-2xl font-bold text-[#321E1E]">Product Catalog Management</h2>
@@ -25,56 +26,59 @@ export const ProductsView = ({ onBackToBilling }) => (
       </div>
       <button
         onClick={onBackToBilling}
-        className="px-4 py-2 bg-[#116D6E] text-white rounded-xl text-xs font-semibold hover:bg-[#0e5859] transition-colors"
+        className="px-4 py-2 bg-[#116D6E] text-white rounded-xl text-xs font-semibold hover:bg-[#0e5859] transition-colors cursor-pointer shadow-xs active:scale-95"
       >
         Go to POS Billing
       </button>
     </div>
 
+    {/* Table Container: Table header titles are static, rows scroll underneath */}
     <div className="bg-white rounded-2xl border border-[#4E3636]/15 shadow-soft overflow-hidden">
-      <table className="w-full text-left text-xs">
-        <thead className="bg-[#FDFBF7] border-b border-[#4E3636]/10 text-[#4E3636] font-bold">
-          <tr>
-            <th className="p-4">Item Name</th>
-            <th className="p-4">Category</th>
-            <th className="p-4">Unit</th>
-            <th className="p-4">Price</th>
-            <th className="p-4">Stock</th>
-            <th className="p-4">Status</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#4E3636]/10">
-          {PRODUCTS.map((prod) => (
-            <tr key={prod.id} className="hover:bg-[#FDFBF7]/60">
-              <td className="p-4 flex items-center gap-3">
-                <img src={prod.image} alt={prod.name} className="w-10 h-10 rounded-lg object-cover" />
-                <div>
-                  <div className="font-bold text-[#321E1E]">{prod.name}</div>
-                  <div className="text-[11px] text-[#4E3636] line-clamp-1">{prod.description}</div>
-                </div>
-              </td>
-              <td className="p-4 text-[#4E3636] font-medium">{prod.category}</td>
-              <td className="p-4 text-[#4E3636]">{prod.unit}</td>
-              <td className="p-4 font-bold text-[#321E1E]">₹{prod.price}</td>
-              <td className="p-4">
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                  prod.stock > 10
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-800'
-                }`}>
-                  {prod.stock} pcs left
-                </span>
-              </td>
-              <td className="p-4">
-                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                  Active
-                </span>
-              </td>
+      <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead className="sticky top-0 z-10 bg-[#FDFBF7] border-b border-[#4E3636]/10 text-[#4E3636] font-bold shadow-2xs">
+            <tr>
+              <th className="p-4 bg-[#FDFBF7]">Item Name</th>
+              <th className="p-4 bg-[#FDFBF7]">Category</th>
+              <th className="p-4 bg-[#FDFBF7]">Unit</th>
+              <th className="p-4 bg-[#FDFBF7]">Price</th>
+              <th className="p-4 bg-[#FDFBF7]">Stock</th>
+              <th className="p-4 bg-[#FDFBF7]">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-[#4E3636]/10">
+            {PRODUCTS.map((prod) => (
+              <tr key={prod.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                <td className="p-4 flex items-center gap-3">
+                  <img src={prod.image} alt={prod.name} className="w-10 h-10 rounded-lg object-cover" />
+                  <div>
+                    <div className="font-bold text-[#321E1E]">{prod.name}</div>
+                    <div className="text-[11px] text-[#4E3636] line-clamp-1">{prod.description}</div>
+                  </div>
+                </td>
+                <td className="p-4 text-[#4E3636] font-medium">{prod.category}</td>
+                <td className="p-4 text-[#4E3636]">{prod.unit}</td>
+                <td className="p-4 font-bold text-[#321E1E]">₹{prod.price}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                    prod.stock > 10
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {prod.stock} pcs left
+                  </span>
+                </td>
+                <td className="p-4">
+                  <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                    Active
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 );

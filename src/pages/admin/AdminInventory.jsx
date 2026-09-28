@@ -416,29 +416,29 @@ export const AdminInventory = () => {
 
       {/* Data Table: White background, rounded-xl, soft shadow */}
       <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7]/60">
-                <th className="py-3 px-5 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+            <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
+              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7]">
+                <th className="py-3 px-5 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Product Image
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Name
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Category
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Price
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Stock Quantity
                 </th>
-                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider">
+                <th className="py-3 px-4 text-xs font-semibold text-[#4E3636] uppercase tracking-wider bg-[#FDFBF7]">
                   Status
                 </th>
-                <th className="py-3 px-5 text-xs font-semibold text-[#4E3636] uppercase tracking-wider text-right">
+                <th className="py-3 px-5 text-xs font-semibold text-[#4E3636] uppercase tracking-wider text-right bg-[#FDFBF7]">
                   Action
                 </th>
               </tr>

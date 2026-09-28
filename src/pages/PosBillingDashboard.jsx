@@ -7,8 +7,7 @@ import ReceiptModal from '../components/ReceiptModal';
 import {
   ProductsView,
   CategoriesView,
-  OrdersView,
-  SettingsView
+  OrdersView
 } from '../components/OtherViews';
 import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
 import { ALL_ORDERS_DATA } from '../data/adminMockData';
@@ -362,9 +361,7 @@ export function PosBillingDashboard() {
           onPrintReceipt={handleReprintReceipt}
           onCollectBalance={handleCollectOrderBalance}
         />
-      ) : (
-        <SettingsView onBackToBilling={() => setActiveTab('billing')} />
-      )}
+      ) : null}
 
       {/* Payment Modal */}
       <PaymentModal
@@ -374,7 +371,7 @@ export function PosBillingDashboard() {
         fullTotalAmount={currentOrderMeta ? currentOrderMeta.totalAmount : currentTotalAmount}
         orderType={currentOrderMeta ? currentOrderMeta.orderTypeLabel : 'Takeaway'}
         pendingAmount={currentOrderMeta ? currentOrderMeta.pendingAmount : 0}
-        customerName={selectedCustomer?.name || 'Walk-in Customer'}
+        customerName={selectedCustomer?.name && selectedCustomer.name !== 'Walk-in Customer' ? selectedCustomer.name : ''}
         customerPhone={selectedCustomer?.phone && selectedCustomer.phone !== '—' ? selectedCustomer.phone : ''}
         billNumber={billNumber}
         onPaymentSuccess={handlePaymentSuccess}

@@ -280,20 +280,20 @@ export const OrdersView = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7]/30 text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3.5 px-5">Bill / Order ID</th>
-                <th className="py-3.5 px-4">Date &amp; Time</th>
-                <th className="py-3.5 px-4">Customer Details</th>
-                <th className="py-3.5 px-4">Type</th>
-                <th className="py-3.5 px-4">Items Summary</th>
-                <th className="py-3.5 px-4">Total Amount</th>
-                <th className="py-3.5 px-4">Advance Paid</th>
-                <th className="py-3.5 px-4">Pending Balance</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-5 text-right">Actions</th>
+            <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
+              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-5 bg-[#FDFBF7]">Bill / Order ID</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Date &amp; Time</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Customer Details</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Type</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Items Summary</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Total Amount</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Advance Paid</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Pending Balance</th>
+                <th className="py-3.5 px-4 bg-[#FDFBF7]">Status</th>
+                <th className="py-3.5 px-5 text-right bg-[#FDFBF7]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#4E3636]/10">

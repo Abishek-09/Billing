@@ -28,6 +28,72 @@ export const ReceiptModal = ({
     window.print();
   };
 
+  const handleDownload = () => {
+    const printableElement = document.getElementById('printable-receipt');
+    if (!printableElement) return;
+
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SweetBite_Receipt_${billNumber}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Courier New", monospace;
+      background: #FDFBF7;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+      margin: 0;
+      color: #321E1E;
+    }
+    .receipt-container {
+      width: 320px;
+      background: #ffffff;
+      padding: 24px;
+      border: 1px solid rgba(78, 54, 54, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+      font-family: monospace;
+    }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: bold; }
+    .title { font-size: 22px; font-weight: bold; margin-bottom: 2px; font-family: Georgia, serif; }
+    .dashed { border-top: 1px dashed rgba(78, 54, 54, 0.3); margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; text-align: left; }
+    th { border-bottom: 1px solid rgba(78, 54, 54, 0.2); padding: 4px 0; }
+    td { padding: 4px 0; }
+    .flex-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .total-row { font-size: 13px; font-weight: bold; color: #CD1818; }
+    @media print {
+      body { background: white; padding: 0; }
+      .receipt-container { border: none; box-shadow: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    ${printableElement.innerHTML}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `SweetBite_Receipt_${billNumber}.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#321E1E]/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-soft-lg border border-[#4E3636]/15 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
@@ -35,12 +101,20 @@ export const ReceiptModal = ({
         <div className="p-4 bg-[#116D6E] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-white" />
-            <h3 className="font-serif font-bold text-sm">Receipt Preview</h3>
+            <h3 className="font-serif font-bold text-sm">Receipt Slip Preview</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownload}
+              className="px-3 py-1.5 bg-white text-[#116D6E] hover:bg-[#FDFBF7] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer active:scale-95"
+              title="Download Receipt Slip (HTML)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Slip</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="px-3 py-1.5 bg-white text-[#116D6E] hover:bg-[#FDFBF7] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+              className="px-3 py-1.5 bg-white/15 text-white hover:bg-white/25 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer border border-white/20 active:scale-95"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print Thermal</span>
@@ -206,13 +280,30 @@ export const ReceiptModal = ({
           </div>
         </div>
 
-        {/* Bottom Done Button */}
-        <div className="p-3 bg-white border-t border-[#4E3636]/10 text-center">
+        {/* Bottom Control Bar */}
+        <div className="p-3 bg-white border-t border-[#4E3636]/10 flex items-center gap-2">
           <button
-            onClick={onClose}
-            className="w-full py-2.5 bg-[#116D6E] hover:bg-[#0e5859] text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            type="button"
+            onClick={handleDownload}
+            className="flex-1 py-2.5 bg-white border border-[#116D6E] text-[#116D6E] hover:bg-[#116D6E]/10 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
           >
-            Done &bull; Start Next Bill
+            <Download className="w-4 h-4" />
+            <span>Download Slip</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex-1 py-2.5 bg-white border border-[#4E3636]/30 text-[#321E1E] hover:bg-[#FDFBF7] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Thermal</span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-[#116D6E] hover:bg-[#0e5859] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-teal active:scale-95"
+          >
+            Close
           </button>
         </div>
       </div>

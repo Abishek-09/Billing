@@ -14,9 +14,11 @@ import {
   AlertCircle,
   ShoppingBag,
   Utensils,
-  CreditCard
+  CreditCard,
+  Receipt
 } from 'lucide-react';
 import { ALL_ORDERS_DATA, getOrdersByRange } from '../../data/adminMockData';
+import ReceiptModal from '../../components/ReceiptModal';
 
 export const AdminOrders = () => {
   const outletContext = useOutletContext();
@@ -25,12 +27,182 @@ export const AdminOrders = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [receiptSlipOrder, setReceiptSlipOrder] = useState(null);
   const [collectModalOrder, setCollectModalOrder] = useState(null);
   const [ordersOverride, setOrdersOverride] = useState({});
   const [toastMessage, setToastMessage] = useState('');
   const [exportNotice, setExportNotice] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const itemsPerPage = 6;
+
+  // Format order into ReceiptModal billData
+  const formatBillData = (order) => {
+    if (!order) return null;
+    return {
+      billNumber: order.id,
+      date: order.date?.split(',')[0] || order.date,
+      time: order.date?.split(',')[1]?.trim() || '',
+      customerName: order.customer,
+      customerPhone: order.customerPhone || '',
+      cashier: 'Chef Marie Laurent',
+      items:
+        order.itemsList?.map((itemStr) => {
+          const match = itemStr.match(/^(\d+)x\s*(.*)$/);
+          if (match) {
+            return {
+              name: match[2],
+              quantity: parseInt(match[1], 10),
+              price: Math.round(order.totalAmount / (order.itemsList.length || 1)),
+            };
+          }
+          return {
+            name: itemStr,
+            quantity: 1,
+            price: Math.round(order.totalAmount / (order.itemsList.length || 1)),
+          };
+        }) || [],
+      subTotal: Math.round(order.totalAmount / 1.05),
+      discountAmount: 0,
+      discountPercent: 0,
+      taxAmount: Math.round(order.totalAmount - order.totalAmount / 1.05),
+      totalAmount: order.totalAmount,
+      advancePaid: order.advancePaid,
+      pendingAmount: order.pendingAmount,
+      paymentMethod:
+        order.type === 'Takeaway' ? 'UPI' : order.type === 'Dine-in' ? 'CASH' : 'CARD',
+      orderType: order.type,
+    };
+  };
+
+  // Direct 1-click Download Slip handler
+  const handleDownloadSingleSlip = (order) => {
+    const bill = formatBillData(order);
+    if (!bill) return;
+
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SweetBite_Slip_${bill.billNumber}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      background: #FDFBF7;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+      margin: 0;
+      color: #321E1E;
+    }
+    .receipt-container {
+      width: 320px;
+      background: #fff;
+      padding: 24px;
+      border: 1px solid rgba(78, 54, 54, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+      font-family: monospace;
+    }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: bold; }
+    .title { font-size: 22px; font-weight: bold; margin-bottom: 2px; font-family: Georgia, serif; }
+    .dashed { border-top: 1px dashed rgba(78, 54, 54, 0.3); margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; text-align: left; }
+    th { border-bottom: 1px solid rgba(78, 54, 54, 0.2); padding: 4px 0; }
+    td { padding: 4px 0; }
+    .flex-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .total-row { font-size: 13px; font-weight: bold; color: #CD1818; }
+    @media print {
+      body { background: white; padding: 0; }
+      .receipt-container { border: none; box-shadow: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <div class="title">SweetBite</div>
+    <div style="font-size: 10px; text-transform: uppercase; color: #4E3636;">Artisan Bakery & Patisserie</div>
+    <div style="font-size: 9px; color: #4E3636; margin-top: 4px;">
+      Shop 4, Heritage Promenade, Park Avenue<br>
+      GSTIN: 27AABCS1429B1Z8 &bull; FSSAI: 11521000000452<br>
+      Ph: +91 (022) 2840-9912
+    </div>
+    <div class="dashed"></div>
+    <div class="text-left" style="font-size: 11px; color: #4E3636;">
+      <div class="flex-row"><span>Invoice No:</span><strong style="color: #321E1E;">${bill.billNumber}</strong></div>
+      <div class="flex-row"><span>Date & Time:</span><span>${bill.date}, ${bill.time}</span></div>
+      <div class="flex-row"><span>Customer:</span><strong style="color: #321E1E;">${bill.customerName}</strong></div>
+      ${bill.customerPhone ? `<div class="flex-row"><span>Mobile:</span><span>${bill.customerPhone}</span></div>` : ''}
+      <div class="flex-row"><span>Order Type:</span><strong style="color: #116D6E; text-transform: uppercase;">${bill.orderType}</strong></div>
+      <div class="flex-row"><span>Cashier:</span><span>${bill.cashier}</span></div>
+    </div>
+    <div class="dashed"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="text-align: center;">Qty</th>
+          <th style="text-align: right;">Rate</th>
+          <th style="text-align: right;">Amt</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bill.items
+          .map(
+            (it) => `
+          <tr>
+            <td>${it.name}</td>
+            <td style="text-align: center;">${it.quantity}</td>
+            <td style="text-align: right;">₹${it.price}</td>
+            <td style="text-align: right; font-weight: bold;">₹${it.price * it.quantity}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>
+    <div class="dashed"></div>
+    <div class="text-right" style="font-size: 11px; color: #4E3636;">
+      <div class="flex-row"><span>Sub Total:</span><span>₹${bill.subTotal.toLocaleString('en-IN')}</span></div>
+      <div class="flex-row"><span>GST (5%):</span><span>+₹${bill.taxAmount.toLocaleString('en-IN')}</span></div>
+      <div class="flex-row total-row" style="border-top: 1px solid rgba(78,54,54,0.2); padding-top: 4px; margin-top: 4px;">
+        <span style="color: #321E1E;">GRAND TOTAL:</span><span>₹${bill.totalAmount.toLocaleString('en-IN')}</span>
+      </div>
+      ${
+        bill.pendingAmount > 0
+          ? `
+      <div class="flex-row" style="color: #047857; margin-top: 4px;"><span>Advance Paid:</span><span>₹${Number(bill.advancePaid).toLocaleString('en-IN')}</span></div>
+      <div class="flex-row" style="color: #CD1818; font-weight: bold;"><span>BALANCE DUE:</span><span>₹${Number(bill.pendingAmount).toLocaleString('en-IN')}</span></div>
+      `
+          : ''
+      }
+      <div class="flex-row" style="margin-top: 4px;"><span>Paid via:</span><strong style="color: #116D6E;">${bill.paymentMethod}</strong></div>
+    </div>
+    <div class="dashed"></div>
+    <div style="font-size: 10px; color: #4E3636; margin-top: 6px;">
+      <p style="font-style: italic; font-family: Georgia, serif; font-size: 12px; margin: 4px 0;">Freshly Baked Happiness</p>
+      <p style="font-size: 9px; color: #666;">Thank you for your visit! For custom orders, visit sweetbite.com</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `SweetBite_Slip_${bill.billNumber}.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setToastMessage(`Official Slip for ${bill.billNumber} downloaded successfully!`);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   useEffect(() => {
     const handleStorage = () => setRefreshTrigger((prev) => prev + 1);
@@ -376,22 +548,44 @@ export const AdminOrders = () => {
                         If Pending Amount > 0: Show "Collect Balance" button (Outline #CD1818, hover fill #CD1818)
                         If Pending Amount = 0: Show "Print Receipt" icon/button (Text #4E3636) */}
                     <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end gap-2.5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* View Slip Button */}
+                        <button
+                          type="button"
+                          onClick={() => setReceiptSlipOrder(order)}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#116D6E]/10 hover:bg-[#116D6E] text-[#116D6E] hover:text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
+                          title="View Official Bill Slip"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Slip</span>
+                        </button>
+
+                        {/* Download Slip Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadSingleSlip(order)}
+                          className="p-1.5 rounded-lg border border-[#4E3636]/20 hover:border-[#116D6E] text-[#4E3636] hover:text-[#116D6E] hover:bg-[#116D6E]/10 transition-all cursor-pointer active:scale-95"
+                          title="Download Bill Slip (HTML)"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+
                         {order.pendingAmount > 0 ? (
                           <button
                             type="button"
                             onClick={() => setCollectModalOrder(order)}
-                            className="px-3 py-1 rounded-lg border border-[#CD1818] text-[#CD1818] hover:bg-[#CD1818] hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                            className="px-2.5 py-1.5 rounded-lg border border-[#CD1818] text-[#CD1818] hover:bg-[#CD1818] hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1 active:scale-95"
+                            title="Collect Remaining Balance"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
-                            <span>Collect Balance</span>
+                            <span>Collect</span>
                           </button>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setSelectedOrder(order)}
+                            onClick={() => setReceiptSlipOrder(order)}
                             className="p-1.5 rounded-lg text-[#4E3636] hover:text-[#321E1E] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
-                            title="Print Receipt"
+                            title="Print Thermal Receipt"
                           >
                             <Printer className="w-4 h-4 text-[#4E3636]" />
                           </button>
@@ -400,9 +594,9 @@ export const AdminOrders = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedOrder(order)}
-                          className="text-xs font-semibold text-[#116D6E] hover:underline cursor-pointer"
+                          className="text-xs font-semibold text-[#4E3636] hover:text-[#116D6E] hover:underline cursor-pointer px-1"
                         >
-                          View
+                          Details
                         </button>
                       </div>
                     </td>
@@ -646,15 +840,30 @@ export const AdminOrders = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => window.print()}
-                  className="flex-1 py-2 rounded-xl bg-white border border-[#321E1E] text-[#321E1E] font-semibold flex items-center justify-center gap-1.5 hover:bg-[#FDFBF7] cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    const ord = selectedOrder;
+                    setSelectedOrder(null);
+                    setReceiptSlipOrder(ord);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-white border border-[#116D6E] text-[#116D6E] font-semibold flex items-center justify-center gap-1.5 hover:bg-[#116D6E]/10 transition-colors cursor-pointer active:scale-95"
+                  title="View Thermal Receipt Slip"
                 >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Receipt</span>
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>View Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSingleSlip(selectedOrder)}
+                  className="flex-1 py-2 rounded-xl bg-white border border-[#321E1E]/30 text-[#321E1E] font-semibold flex items-center justify-center gap-1.5 hover:bg-[#FDFBF7] transition-colors cursor-pointer active:scale-95"
+                  title="Download Slip (HTML)"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Slip</span>
                 </button>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="flex-1 py-2 rounded-xl bg-[#116D6E] text-white font-semibold hover:bg-[#0e5859] cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#116D6E] text-white font-semibold hover:bg-[#0e5859] cursor-pointer"
                 >
                   Close
                 </button>
@@ -662,6 +871,15 @@ export const AdminOrders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Official Receipt Slip Modal (View, Print Thermal & Download) */}
+      {receiptSlipOrder && (
+        <ReceiptModal
+          isOpen={Boolean(receiptSlipOrder)}
+          onClose={() => setReceiptSlipOrder(null)}
+          billData={formatBillData(receiptSlipOrder)}
+        />
       )}
     </div>
   );

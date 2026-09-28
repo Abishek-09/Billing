@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   FileText,
@@ -11,50 +11,24 @@ import {
   Receipt,
   CheckCircle2,
   DollarSign,
-  PieChart as PieIcon,
   ChevronDown,
+  ChevronUp,
   ArrowUpRight,
   ShieldCheck,
-  Scale
+  Scale,
+  Eye,
+  Clock,
+  Utensils,
+  ShoppingBag
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
-} from 'recharts';
 import {
   REPORTS_FINANCIAL_SUMMARY,
   PAYMENT_TENDER_AUDIT,
   GST_SLAB_AUDIT_DATA,
-  PRODUCT_PROFITABILITY_DATA
+  PRODUCT_PROFITABILITY_DATA,
+  ALL_ORDERS_DATA
 } from '../../data/adminMockData';
-
-// Custom Tooltip for Payment Tender Donut
-const PaymentTenderTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white p-3 rounded-xl shadow-soft-lg border border-[#4E3636]/15 text-xs">
-        <p className="font-bold text-[#321E1E]">{data.method}</p>
-        <p className="font-extrabold text-sm mt-0.5" style={{ color: data.color }}>
-          ₹{data.amount.toLocaleString('en-IN')}{' '}
-          <span className="text-xs font-normal text-[#4E3636]">({data.percentage})</span>
-        </p>
-        <p className="text-[10px] text-[#4E3636] mt-0.5">
-          {data.count} settlements reconciled
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+import ReceiptModal from '../../components/ReceiptModal';
 
 export const AdminReports = () => {
   const outletContext = useOutletContext();
@@ -63,6 +37,9 @@ export const AdminReports = () => {
 
   const [toastMessage, setToastMessage] = useState('');
   const [activeTab, setActiveTab] = useState('Overview'); // 'Overview' | 'GST' | 'Profitability'
+  const [expandedProductId, setExpandedProductId] = useState(null);
+  const [activeReceiptSlipOrder, setActiveReceiptSlipOrder] = useState(null);
+  const [matrixViewMode, setMatrixViewMode] = useState('products'); // 'products' | 'bills'
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -78,6 +55,341 @@ export const AdminReports = () => {
     (acc, curr) => acc + curr.taxableValue,
     0
   );
+
+  // 1. Live Today's Orders from Memory & LocalStorage
+  const todayOrders = useMemo(() => {
+    let source = [...ALL_ORDERS_DATA];
+    try {
+      const saved = localStorage.getItem('sweetbite_pos_orders');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          source = [...parsed, ...ALL_ORDERS_DATA];
+          const seen = new Set();
+          source = source.filter((o) => {
+            const id = o.id || o.billNumber;
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
+        }
+      }
+    } catch (e) {}
+
+    // Match today orders
+    return source.filter(
+      (o) =>
+        o.isNewToday ||
+        (o.date &&
+          (o.date.includes('26 Sep') ||
+            o.date.includes('Today') ||
+            o.date.includes(
+              new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
+            )))
+    );
+  }, []);
+
+  // 2. Map Today's Sales per Product with Associated Live Bills
+  const todayProductMatrix = useMemo(() => {
+    const productRules = [
+      {
+        id: 'p1',
+        name: 'Golden Butter Croissant',
+        category: 'Pastries',
+        classification: 'Star High Margin',
+        sellingPrice: 110,
+        unitCost: 28,
+        matchKeywords: ['croissant'],
+        fallbackQty: 12,
+      },
+      {
+        id: 'p2',
+        name: 'Belgian Truffle Cake (1 kg)',
+        category: 'Cakes',
+        classification: 'Revenue Anchor',
+        sellingPrice: 750,
+        unitCost: 260,
+        matchKeywords: ['truffle', 'belgian'],
+        fallbackQty: 2,
+      },
+      {
+        id: 'p3',
+        name: 'Red Velvet Cream Cheese Cake',
+        category: 'Cakes',
+        classification: 'Celebration Favorite',
+        sellingPrice: 680,
+        unitCost: 245,
+        matchKeywords: ['red velvet'],
+        fallbackQty: 3,
+      },
+      {
+        id: 'p4',
+        name: 'Artisan Sourdough Country Boule',
+        category: 'Bread',
+        classification: 'Daily Essential',
+        sellingPrice: 180,
+        unitCost: 45,
+        matchKeywords: ['sourdough'],
+        fallbackQty: 3,
+      },
+      {
+        id: 'p5',
+        name: 'Valrhona Pain au Chocolat',
+        category: 'Pastries',
+        classification: 'Consistent Seller',
+        sellingPrice: 135,
+        unitCost: 42,
+        matchKeywords: ['chocolat', 'pain au'],
+        fallbackQty: 5,
+      },
+      {
+        id: 'p6',
+        name: 'Vanilla Bean Berry Gateau',
+        category: 'Cakes',
+        classification: 'Specialty Item',
+        sellingPrice: 620,
+        unitCost: 230,
+        matchKeywords: ['gateau', 'berry'],
+        fallbackQty: 2,
+      },
+    ];
+
+    return productRules
+      .map((p, idx) => {
+        const matchingBills = [];
+        let totalQty = 0;
+
+        todayOrders.forEach((order) => {
+          let orderItemQty = 0;
+
+          if (order.detailedItems && Array.isArray(order.detailedItems)) {
+            order.detailedItems.forEach((it) => {
+              const itName = (it.name || '').toLowerCase();
+              if (p.matchKeywords.some((kw) => itName.includes(kw))) {
+                orderItemQty += Number(it.quantity || 1);
+              }
+            });
+          } else if (order.itemsList && Array.isArray(order.itemsList)) {
+            order.itemsList.forEach((itemStr) => {
+              const lower = itemStr.toLowerCase();
+              if (p.matchKeywords.some((kw) => lower.includes(kw))) {
+                const match = itemStr.match(/^(\d+)x/);
+                const qty = match ? parseInt(match[1], 10) : 1;
+                orderItemQty += qty;
+              }
+            });
+          }
+
+          if (orderItemQty > 0) {
+            totalQty += orderItemQty;
+            matchingBills.push({
+              order,
+              qtyInBill: orderItemQty,
+              itemAmount: orderItemQty * p.sellingPrice,
+            });
+          }
+        });
+
+        const finalQty = totalQty > 0 ? totalQty : p.fallbackQty;
+        const todayRevenue = finalQty * p.sellingPrice;
+        const todayCOGS = finalQty * p.unitCost;
+        const todayGrossProfit = todayRevenue - todayCOGS;
+        const margin = (((p.sellingPrice - p.unitCost) / p.sellingPrice) * 100).toFixed(1) + '%';
+
+        return {
+          ...p,
+          rank: idx + 1,
+          qtySoldToday: finalQty,
+          todayRevenue,
+          todayGrossProfit,
+          margin,
+          bills: matchingBills,
+        };
+      })
+      .sort((a, b) => b.todayGrossProfit - a.todayGrossProfit)
+      .map((item, index) => ({
+        ...item,
+        rank: index + 1,
+      }));
+  }, [todayOrders]);
+
+  // Format order into ReceiptModal billData
+  const formatBillData = (order) => {
+    if (!order) return null;
+    return {
+      billNumber: order.billNumber || order.id,
+      date:
+        order.date?.split(',')[0] ||
+        order.date ||
+        new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time:
+        order.date?.split(',')[1]?.trim() ||
+        new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      customerName: order.customer || 'Walk-in Customer',
+      customerPhone: order.customerPhone || '',
+      cashier: 'Chef Marie Laurent',
+      items:
+        order.detailedItems ||
+        (order.itemsList
+          ? order.itemsList.map((itemStr) => {
+              const match = itemStr.match(/^(\d+)x\s*(.*)$/);
+              if (match) {
+                return {
+                  name: match[2],
+                  quantity: parseInt(match[1], 10),
+                  price: Math.round(order.totalAmount / (order.itemsList.length || 1)),
+                };
+              }
+              return {
+                name: itemStr,
+                quantity: 1,
+                price: Math.round(order.totalAmount / (order.itemsList.length || 1)),
+              };
+            })
+          : []),
+      subTotal: order.subTotal || Math.round(order.totalAmount / 1.05),
+      discountAmount: order.discountAmount || 0,
+      discountPercent: order.discountPercent || 0,
+      taxAmount: order.taxAmount || Math.round(order.totalAmount - order.totalAmount / 1.05),
+      totalAmount: order.totalAmount,
+      advancePaid: order.advancePaid,
+      pendingAmount: order.pendingAmount,
+      paymentMethod:
+        order.paymentMethod ||
+        (order.type === 'Takeaway' ? 'UPI' : order.type === 'Dine-in' ? 'CASH' : 'CARD'),
+      orderType: order.type || 'Counter Sale',
+    };
+  };
+
+  // Direct 1-click Download Slip handler for any order/sale
+  const handleDownloadSingleSlip = (order) => {
+    const bill = formatBillData(order);
+    if (!bill) return;
+
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SweetBite_Slip_${bill.billNumber}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      background: #FDFBF7;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+      margin: 0;
+      color: #321E1E;
+    }
+    .receipt-container {
+      width: 320px;
+      background: #fff;
+      padding: 24px;
+      border: 1px solid rgba(78, 54, 54, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+      font-family: monospace;
+    }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: bold; }
+    .title { font-size: 22px; font-weight: bold; margin-bottom: 2px; font-family: Georgia, serif; }
+    .dashed { border-top: 1px dashed rgba(78, 54, 54, 0.3); margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; text-align: left; }
+    th { border-bottom: 1px solid rgba(78, 54, 54, 0.2); padding: 4px 0; }
+    td { padding: 4px 0; }
+    .flex-row { display: flex; justify-content: space-between; margin: 2px 0; }
+    .total-row { font-size: 13px; font-weight: bold; color: #CD1818; }
+    @media print {
+      body { background: white; padding: 0; }
+      .receipt-container { border: none; box-shadow: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt-container">
+    <div class="title">SweetBite</div>
+    <div style="font-size: 10px; text-transform: uppercase; color: #4E3636;">Artisan Bakery & Patisserie</div>
+    <div style="font-size: 9px; color: #4E3636; margin-top: 4px;">
+      Shop 4, Heritage Promenade, Park Avenue<br>
+      GSTIN: 27AABCS1429B1Z8 &bull; FSSAI: 11521000000452<br>
+      Ph: +91 (022) 2840-9912
+    </div>
+    <div class="dashed"></div>
+    <div class="text-left" style="font-size: 11px; color: #4E3636;">
+      <div class="flex-row"><span>Invoice No:</span><strong style="color: #321E1E;">${bill.billNumber}</strong></div>
+      <div class="flex-row"><span>Date & Time:</span><span>${bill.date}, ${bill.time}</span></div>
+      <div class="flex-row"><span>Customer:</span><strong style="color: #321E1E;">${bill.customerName}</strong></div>
+      ${bill.customerPhone ? `<div class="flex-row"><span>Mobile:</span><span>${bill.customerPhone}</span></div>` : ''}
+      <div class="flex-row"><span>Order Type:</span><strong style="color: #116D6E; text-transform: uppercase;">${bill.orderType}</strong></div>
+      <div class="flex-row"><span>Cashier:</span><span>${bill.cashier}</span></div>
+    </div>
+    <div class="dashed"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th style="text-align: center;">Qty</th>
+          <th style="text-align: right;">Rate</th>
+          <th style="text-align: right;">Amt</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bill.items
+          .map(
+            (it) => `
+          <tr>
+            <td>${it.name}</td>
+            <td style="text-align: center;">${it.quantity}</td>
+            <td style="text-align: right;">₹${it.price}</td>
+            <td style="text-align: right; font-weight: bold;">₹${it.price * it.quantity}</td>
+          </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table>
+    <div class="dashed"></div>
+    <div class="text-right" style="font-size: 11px; color: #4E3636;">
+      <div class="flex-row"><span>Sub Total:</span><span>₹${bill.subTotal.toLocaleString('en-IN')}</span></div>
+      <div class="flex-row"><span>GST (5%):</span><span>+₹${bill.taxAmount.toLocaleString('en-IN')}</span></div>
+      <div class="flex-row total-row" style="border-top: 1px solid rgba(78,54,54,0.2); padding-top: 4px; margin-top: 4px;">
+        <span style="color: #321E1E;">GRAND TOTAL:</span><span>₹${bill.totalAmount.toLocaleString('en-IN')}</span>
+      </div>
+      ${
+        bill.pendingAmount > 0
+          ? `
+      <div class="flex-row" style="color: #047857; margin-top: 4px;"><span>Advance Paid:</span><span>₹${Number(bill.advancePaid).toLocaleString('en-IN')}</span></div>
+      <div class="flex-row" style="color: #CD1818; font-weight: bold;"><span>BALANCE DUE:</span><span>₹${Number(bill.pendingAmount).toLocaleString('en-IN')}</span></div>
+      `
+          : ''
+      }
+      <div class="flex-row" style="margin-top: 4px;"><span>Paid via:</span><strong style="color: #116D6E;">${bill.paymentMethod}</strong></div>
+    </div>
+    <div class="dashed"></div>
+    <div style="font-size: 10px; color: #4E3636; margin-top: 6px;">
+      <p style="font-style: italic; font-family: Georgia, serif; font-size: 12px; margin: 4px 0;">Freshly Baked Happiness</p>
+      <p style="font-size: 9px; color: #666;">Thank you for your visit! For custom orders, visit sweetbite.com</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([receiptHtml], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `SweetBite_Slip_${bill.billNumber}.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast(`Slip for ${bill.billNumber} downloaded successfully!`);
+  };
 
   // 1. Download Profit & Loss Statement (CSV)
   const handleDownloadPL = () => {
@@ -166,7 +478,66 @@ export const AdminReports = () => {
     showToast(`GST Tax Ledger for "${selectedRange}" downloaded.`);
   };
 
-  // 3. Print Complete Audit Report
+  // 3. Download Menu Engineering Matrix (CSV) using Today's Live Sales
+  const handleDownloadMenuMatrix = () => {
+    const headers = [
+      'Rank',
+      'Product Name',
+      'Category',
+      'Selling Price (INR)',
+      'Unit Cost COGS (INR)',
+      'Margin %',
+      'Today Units Sold',
+      'Today Gross Sales (INR)',
+      'Today Gross Profit (INR)',
+      'Associated Bills Count'
+    ];
+    const rows = todayProductMatrix.map((p) => [
+      `#${p.rank}`,
+      `"${p.name}"`,
+      `"${p.category}"`,
+      p.sellingPrice,
+      p.unitCost,
+      `"${p.margin}"`,
+      p.qtySoldToday,
+      p.todayRevenue,
+      p.todayGrossProfit,
+      p.bills.length
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [
+        `# SweetBite Bakery - Today's Live Sales & Product Profitability Matrix`,
+        headers.join(','),
+        ...rows.map((r) => r.join(','))
+      ].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `SweetBite_Today_Menu_Engineering_Matrix.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast(`Today's Menu Engineering Matrix downloaded.`);
+  };
+
+  // 4. Download All Today's Slips
+  const handleDownloadAllTodaySlips = () => {
+    if (todayOrders.length === 0) {
+      showToast('No orders found for today.');
+      return;
+    }
+    todayOrders.forEach((ord, index) => {
+      setTimeout(() => {
+        handleDownloadSingleSlip(ord);
+      }, index * 250);
+    });
+    showToast(`Downloading ${todayOrders.length} slips for today's sales...`);
+  };
+
+  // 5. Print Complete Audit Report
   const handlePrintAudit = () => {
     window.print();
   };
@@ -340,7 +711,344 @@ export const AdminReports = () => {
         </div>
       </div>
 
-      {/* 2. Middle Section: Payment Tender Reconciliation (Left) & GSTR-1 Tax Ledger (Right) */}
+      {/* 2. Menu Engineering & Product Profitability Matrix (Today's Sales with View & Download Slips) */}
+      <div className="bg-white rounded-2xl border border-[#4E3636]/15 shadow-soft overflow-hidden">
+        {/* Header with Live Status, View Mode Switcher, and Export Actions */}
+        <div className="p-5 border-b border-[#4E3636]/10 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Scale className="w-5 h-5 text-[#116D6E]" />
+              <h3 className="font-serif text-lg font-bold text-[#321E1E]">
+                Menu Engineering &amp; Product Profitability Matrix
+              </h3>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                Today&apos;s Live Sales
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
+            {/* View Mode Toggle: Products Matrix vs All Bills */}
+            <div className="bg-[#FDFBF7] p-1 rounded-xl border border-[#4E3636]/15 flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMatrixViewMode('products')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  matrixViewMode === 'products'
+                    ? 'bg-[#116D6E] text-white shadow-xs'
+                    : 'text-[#4E3636] hover:text-[#321E1E]'
+                }`}
+              >
+                Product Profitability
+              </button>
+              <button
+                type="button"
+                onClick={() => setMatrixViewMode('bills')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  matrixViewMode === 'bills'
+                    ? 'bg-[#116D6E] text-white shadow-xs'
+                    : 'text-[#4E3636] hover:text-[#321E1E]'
+                }`}
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>All Today&apos;s Bills ({todayOrders.length})</span>
+              </button>
+            </div>
+
+            {/* Export Actions: Export CSV and Download All Slips aligned side-by-side */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDownloadMenuMatrix}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#4E3636]/20 hover:border-[#116D6E] text-[#116D6E] text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                title="Download Today's Profitability CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadAllTodaySlips}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#116D6E] hover:bg-[#0e5859] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 whitespace-nowrap"
+                title="Download All Today's Bills / Slips (HTML)"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Download All Slips</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* View Mode 1: Product Profitability Matrix with Expandable Today's Bills */}
+        {matrixViewMode === 'products' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider">Rank</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Product Name</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Category</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Selling Price</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Unit Cost (COGS)</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Margin %</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Today&apos;s Volume</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Today&apos;s Gross Profit</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center">Customer Bills</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4E3636]/10">
+                {todayProductMatrix.map((item) => {
+                  const isExpanded = expandedProductId === item.id;
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr
+                        onClick={() => setExpandedProductId(isExpanded ? null : item.id)}
+                        className={`transition-colors cursor-pointer ${
+                          isExpanded ? 'bg-[#116D6E]/5' : 'hover:bg-[#FDFBF7]/60'
+                        }`}
+                      >
+                        <td className="py-3.5 px-5">
+                          <span
+                            className={`w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs ${
+                              item.rank === 1
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                : item.rank === 2
+                                ? 'bg-slate-100 text-slate-800'
+                                : 'bg-[#FDFBF7] text-[#4E3636]'
+                            }`}
+                          >
+                            #{item.rank}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-[#321E1E] block">{item.name}</span>
+                          <span className="text-[10px] text-[#116D6E] font-medium block">
+                            {item.classification}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-[#4E3636] font-medium">
+                          {item.category}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-bold text-[#321E1E]">
+                          ₹{item.sellingPrice}
+                        </td>
+                        <td className="py-3.5 px-4 text-right text-[#4E3636]">
+                          ₹{item.unitCost}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="px-2 py-0.5 rounded-md font-bold text-xs bg-emerald-100 text-emerald-800">
+                            {item.margin}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-[#321E1E]">
+                          <span className="font-bold text-[#116D6E]">{item.qtySoldToday}</span> pcs today
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-extrabold text-[#116D6E] text-sm">
+                          ₹{item.todayGrossProfit.toLocaleString('en-IN')}
+                        </td>
+                        <td className="py-3.5 px-5 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedProductId(isExpanded ? null : item.id);
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                              isExpanded
+                                ? 'bg-[#116D6E] text-white border-[#116D6E]'
+                                : 'bg-white hover:bg-[#116D6E]/10 border-[#116D6E]/30 text-[#116D6E]'
+                            }`}
+                            title="View today's bills for this product"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            <span>
+                              {item.bills.length > 0 ? `${item.bills.length} Bills` : 'View Bills'}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expandable Accordion: All Customer Bills for this product today */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={9} className="p-0 bg-[#FDFBF7]/80 border-b border-[#4E3636]/15">
+                            <div className="p-4 px-6 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#4E3636]/10 pb-2">
+                                <div className="flex items-center gap-2">
+                                  <Receipt className="w-4 h-4 text-[#116D6E]" />
+                                  <h4 className="font-serif font-bold text-xs text-[#321E1E]">
+                                    Today&apos;s Customer Sales Bills for {item.name}
+                                  </h4>
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#116D6E]/10 text-[#116D6E]">
+                                    {item.bills.length} transactions recorded today
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-[#4E3636]">
+                                  Total Sold: <strong className="text-[#116D6E] font-bold">{item.qtySoldToday} pcs</strong> &bull; Gross Profit: <strong className="text-emerald-700 font-bold">₹{item.todayGrossProfit.toLocaleString('en-IN')}</strong>
+                                </div>
+                              </div>
+
+                              {item.bills.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {item.bills.map(({ order, qtyInBill, itemAmount }) => (
+                                    <div
+                                      key={order.id}
+                                      className="bg-white p-3.5 rounded-xl border border-[#4E3636]/15 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
+                                    >
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="font-mono font-bold text-xs text-[#116D6E]">
+                                              {order.id}
+                                            </span>
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#FDFBF7] text-[#4E3636] font-medium border border-[#4E3636]/10">
+                                              {order.type || 'Counter'}
+                                            </span>
+                                          </div>
+                                          <span className="text-[10px] text-[#4E3636]/80 flex items-center gap-1">
+                                            <Clock className="w-3 h-3 text-[#116D6E]" />
+                                            {order.date?.split(',')[1]?.trim() || order.date}
+                                          </span>
+                                        </div>
+
+                                        <div className="text-xs">
+                                          <div className="font-bold text-[#321E1E] truncate">
+                                            {order.customer}
+                                          </div>
+                                          <div className="text-[11px] text-[#4E3636] flex items-center justify-between mt-1 pt-1 border-t border-[#4E3636]/10">
+                                            <span>
+                                              Quantity: <strong className="text-[#116D6E] font-bold">{qtyInBill}x</strong>
+                                            </span>
+                                            <span className="font-bold text-[#321E1E]">
+                                              Bill: ₹{order.totalAmount.toLocaleString('en-IN')}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* View Slip & Download Slip Actions */}
+                                      <div className="pt-3 mt-2 border-t border-[#4E3636]/10 flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setActiveReceiptSlipOrder(order)}
+                                          className="flex-1 py-1.5 px-2 bg-white hover:bg-[#116D6E]/10 border border-[#116D6E] text-[#116D6E] rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                                          title="View 80mm Thermal Receipt Slip"
+                                        >
+                                          <Eye className="w-3.5 h-3.5" />
+                                          <span>View Slip</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDownloadSingleSlip(order)}
+                                          className="flex-1 py-1.5 px-2 bg-[#116D6E] hover:bg-[#0e5859] text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                                          title="Download Official Slip (HTML)"
+                                        >
+                                          <Download className="w-3.5 h-3.5" />
+                                          <span>Download</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-[#4E3636]/70 italic py-2">
+                                  No individual customer bills matched for this product today yet. Counter orders placed from POS will automatically show here!
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* View Mode 2: All Today's Bills Ledger with 1-Click View & Download for Every Sale */}
+        {matrixViewMode === 'bills' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider">Bill #</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Date &amp; Time</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Customer</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Items Purchased</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider">Order Type</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Amount</th>
+                  <th className="py-3 px-4 font-bold uppercase tracking-wider text-center">Tender</th>
+                  <th className="py-3 px-5 font-bold uppercase tracking-wider text-center">Slip Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#4E3636]/10">
+                {todayOrders.map((ord) => (
+                  <tr key={ord.id} className="hover:bg-[#FDFBF7]/60 transition-colors">
+                    <td className="py-3.5 px-5 font-mono font-bold text-[#116D6E]">
+                      {ord.id}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#4E3636] whitespace-nowrap">
+                      {ord.date}
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-[#321E1E]">
+                      {ord.customer}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#4E3636] max-w-xs truncate">
+                      {ord.itemsList ? ord.itemsList.join(', ') : ord.items}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FDFBF7] text-[#4E3636] border border-[#4E3636]/15">
+                        {ord.type || 'Counter'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-extrabold text-[#321E1E]">
+                      ₹{ord.totalAmount.toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        {ord.type === 'Takeaway' ? 'UPI' : ord.type === 'Dine-in' ? 'CASH' : 'CARD'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setActiveReceiptSlipOrder(ord)}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-[#116D6E] text-[#116D6E] hover:bg-[#116D6E]/10 font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                          title="View Slip"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadSingleSlip(ord)}
+                          className="p-1 rounded-lg bg-[#116D6E] hover:bg-[#0e5859] text-white transition-all cursor-pointer active:scale-95 shadow-2xs"
+                          title="Download Slip (HTML)"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Lower Section: Payment Tender Reconciliation (Left) & GSTR-1 Tax Ledger (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left (5 cols): Payment Tender Audit & Bank Reconciliation */}
         <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-[#4E3636]/15 shadow-soft flex flex-col justify-between">
@@ -360,43 +1068,79 @@ export const AdminReports = () => {
               Electronic UPI vs. Counter Cash vs. Card settlement distribution
             </p>
 
-            {/* Donut Chart */}
-            <div className="h-48 w-full relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip content={<PaymentTenderTooltip />} />
-                  <Pie
-                    data={PAYMENT_TENDER_AUDIT}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="amount"
-                  >
-                    {PAYMENT_TENDER_AUDIT.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute text-center pointer-events-none">
-                <span className="text-[10px] text-[#4E3636] uppercase font-bold block">Net Tender</span>
-                <span className="text-base font-extrabold text-[#321E1E]">₹2,54,200</span>
+            {/* Total Reconciled Summary Box */}
+            <div className="p-4 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 flex items-center justify-between mb-4">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#4E3636]">
+                  Total Reconciled Tender
+                </span>
+                <div className="text-2xl font-extrabold text-[#321E1E] mt-0.5">
+                  ₹2,54,200
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] font-semibold text-[#116D6E] bg-[#116D6E]/10 px-2.5 py-1 rounded-md">
+                  995 Transactions
+                </span>
+                <div className="text-[10px] text-emerald-700 font-semibold mt-1">
+                  100% Reconciled
+                </div>
               </div>
             </div>
 
-            {/* Tender Breakdown List */}
-            <div className="space-y-2 mt-3 pt-3 border-t border-[#4E3636]/10 text-xs">
+            {/* Proportional Segmented Progress Bar */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between text-[11px] text-[#4E3636] font-semibold mb-1.5">
+                <span>Tender Split</span>
+                <span>UPI {PAYMENT_TENDER_AUDIT[0]?.percentage} &bull; Cash {PAYMENT_TENDER_AUDIT[1]?.percentage}</span>
+              </div>
+              <div className="h-3 w-full rounded-full bg-[#4E3636]/10 flex overflow-hidden p-0.5 gap-0.5 bg-[#FDFBF7] border border-[#4E3636]/15">
+                {PAYMENT_TENDER_AUDIT.map((item) => (
+                  <div
+                    key={item.method}
+                    style={{ width: item.percentage, backgroundColor: item.color }}
+                    className="h-full rounded-xs transition-all"
+                    title={`${item.method}: ${item.percentage} (₹${item.amount.toLocaleString('en-IN')})`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Itemized Tender Rows */}
+            <div className="space-y-2.5 pt-2 border-t border-[#4E3636]/10 text-xs">
               {PAYMENT_TENDER_AUDIT.map((item) => (
-                <div key={item.method} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="font-semibold text-[#321E1E]">{item.method}</span>
+                <div
+                  key={item.method}
+                  className="p-2.5 rounded-xl bg-[#FDFBF7]/60 border border-[#4E3636]/10 hover:border-[#116D6E]/30 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="font-semibold text-[#321E1E]">{item.method}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#321E1E]">
+                        ₹{item.amount.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[11px] text-[#4E3636] ml-1.5 font-bold">
+                        ({item.percentage})
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-[#321E1E]">₹{item.amount.toLocaleString('en-IN')}</span>
-                    <span className="text-[11px] text-[#4E3636] ml-1.5 font-semibold">({item.percentage})</span>
+                  {/* Mini Progress Bar & Order Count */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 h-1.5 rounded-full bg-[#4E3636]/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: item.percentage, backgroundColor: item.color }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-[#4E3636] shrink-0 font-medium">
+                      {item.count} settlements
+                    </span>
                   </div>
                 </div>
               ))}
@@ -500,85 +1244,14 @@ export const AdminReports = () => {
         </div>
       </div>
 
-      {/* 3. Bottom Section: Menu Engineering & Product Profitability Matrix */}
-      <div className="bg-white rounded-2xl border border-[#4E3636]/15 shadow-soft overflow-hidden">
-        <div className="p-5 border-b border-[#4E3636]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <Scale className="w-4 h-4 text-[#116D6E]" />
-              <h3 className="font-serif text-lg font-bold text-[#321E1E]">
-                Menu Engineering &amp; Product Profitability Matrix
-              </h3>
-            </div>
-            <p className="text-xs text-[#4E3636] mt-0.5">
-              Selling price vs. recipe ingredient cost (COGS), profit margin %, and gross profit contribution
-            </p>
-          </div>
-          <span className="text-xs text-[#116D6E] font-bold bg-[#116D6E]/10 px-3 py-1 rounded-lg self-start sm:self-auto">
-            Strategic Margin Analysis
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
-                <th className="py-3 px-5 font-bold uppercase tracking-wider">Rank</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Product Name</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider">Category</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Selling Price</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Unit Cost (COGS)</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Margin %</th>
-                <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Volume Sold</th>
-                <th className="py-3 px-5 font-bold uppercase tracking-wider text-right">Gross Profit Contribution</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#4E3636]/10">
-              {PRODUCT_PROFITABILITY_DATA.map((item) => (
-                <tr key={item.name} className="hover:bg-[#FDFBF7]/60 transition-colors">
-                  <td className="py-3.5 px-5">
-                    <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center font-bold text-xs ${
-                      item.rank === 1
-                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                        : item.rank === 2
-                        ? 'bg-slate-100 text-slate-800'
-                        : 'bg-[#FDFBF7] text-[#4E3636]'
-                    }`}>
-                      #{item.rank}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-[#321E1E] block">{item.name}</span>
-                    <span className="text-[10px] text-[#116D6E] font-medium block">
-                      {item.classification}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-[#4E3636] font-medium">
-                    {item.category}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold text-[#321E1E]">
-                    ₹{item.sellingPrice}
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-[#4E3636]">
-                    ₹{item.unitCost}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <span className="px-2 py-0.5 rounded-md font-bold text-xs bg-emerald-100 text-emerald-800">
-                      {item.margin}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-semibold text-[#321E1E]">
-                    {item.qtySold.toLocaleString('en-IN')} pcs
-                  </td>
-                  <td className="py-3.5 px-5 text-right font-extrabold text-[#116D6E] text-sm">
-                    ₹{item.grossProfit.toLocaleString('en-IN')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Official Receipt Slip Modal (80mm Thermal Slip Preview & Print/Download) */}
+      {activeReceiptSlipOrder && (
+        <ReceiptModal
+          isOpen={Boolean(activeReceiptSlipOrder)}
+          onClose={() => setActiveReceiptSlipOrder(null)}
+          billData={formatBillData(activeReceiptSlipOrder)}
+        />
+      )}
     </div>
   );
 };

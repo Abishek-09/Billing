@@ -559,18 +559,18 @@ export const AdminCustomers = () => {
 
       {/* Data Table: White background, rounded-xl, soft shadow */}
       <div className="bg-white rounded-xl shadow-soft border border-[#4E3636]/10 overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7]/60 text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-5">Customer Profile</th>
-                <th className="py-3 px-4">Contact Details</th>
-                <th className="py-3 px-4">{reportPeriod} Orders</th>
-                <th className="py-3 px-4">{reportPeriod} Spend</th>
-                <th className="py-3 px-4">Avg Ticket</th>
-                <th className="py-3 px-4">Loyalty Tier</th>
-                <th className="py-3 px-4">Lifetime Spend</th>
-                <th className="py-3 px-5 text-right">Actions</th>
+            <thead className="sticky top-0 z-10 bg-[#FDFBF7] shadow-xs">
+              <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636] font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3 px-5 bg-[#FDFBF7]">Customer Profile</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">Contact Details</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">{reportPeriod} Orders</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">{reportPeriod} Spend</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">Avg Ticket</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">Loyalty Tier</th>
+                <th className="py-3 px-4 bg-[#FDFBF7]">Lifetime Spend</th>
+                <th className="py-3 px-5 text-right bg-[#FDFBF7]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#4E3636]/10 text-xs">

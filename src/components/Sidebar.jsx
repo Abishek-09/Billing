@@ -4,7 +4,6 @@ import {
   CakeSlice,
   Tags,
   ShoppingBag,
-  Settings,
   Sparkles,
 } from 'lucide-react';
 import SidebarIllustration from './SidebarIllustration';
@@ -14,7 +13,6 @@ const NAV_ITEMS = [
   { id: 'products', label: 'Products', icon: CakeSlice },
   { id: 'categories', label: 'Categories', icon: Tags },
   { id: 'orders', label: 'Orders', icon: ShoppingBag },
-  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export const Sidebar = ({ activeTab, onSelectTab }) => {
