@@ -12,6 +12,8 @@ import {
 } from '../components/OtherViews';
 import { PRODUCTS, CUSTOMERS, INITIAL_RECENT_BILLS } from '../data/mockData';
 import { ALL_ORDERS_DATA } from '../data/adminMockData';
+import { WeightSelectionModal } from '../components/modals/WeightSelectionModal';
+import { generateCartItemId, round2 } from '../services/weightCalculationService';
 
 export function PosBillingDashboard() {
   // Navigation State
@@ -60,7 +62,31 @@ export function PosBillingDashboard() {
   // Modals State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [weightModalProduct, setWeightModalProduct] = useState(null);
   const [lastCompletedBill, setLastCompletedBill] = useState(null);
+
+  // Helper for strict 2-decimal financial totals across PIECE & WEIGHT products
+  const calculateCartTotals = (items, discPercent = 0) => {
+    const subTotal = round2(
+      items.reduce(
+        (sum, item) => sum + (item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price) * item.quantity,
+        0
+      )
+    );
+    const discountAmount = round2((subTotal * (discPercent || 0)) / 100);
+    const taxableAmount = Math.max(0, subTotal - discountAmount);
+    const taxAmount = round2(
+      items.reduce((sum, item) => {
+        const itemPre = (item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price) * item.quantity;
+        const itemDisc = discPercent > 0 ? (itemPre * discPercent) / 100 : 0;
+        const itemTaxable = Math.max(0, itemPre - itemDisc);
+        const rate = (item.gstRate !== undefined ? item.gstRate : 5) / 100;
+        return sum + (itemTaxable * rate);
+      }, 0)
+    );
+    const totalAmount = round2(taxableAmount + taxAmount);
+    return { subTotal, discountAmount, taxableAmount, taxAmount, totalAmount };
+  };
 
   // Orders Ledger State (synced across POS and Admin)
   const [ordersList, setOrdersList] = useState(() => {
@@ -74,48 +100,111 @@ export function PosBillingDashboard() {
     return [...ALL_ORDERS_DATA];
   });
 
-  // Add Item to Cart
-  const handleAddToCart = (product) => {
+  // Add Item to Cart (Single Source of Truth for Click, Enter, and Barcode Scan)
+  const handleAddToCart = (product, weightPayload = null) => {
+    if (!product) return;
+
+    // Respect stock validation (out of stock = do not add)
+    if (product.stock !== undefined && product.stock <= 0) {
+      return;
+    }
+
+    // Weight-based product guard: Open modal if no weight payload provided
+    if (product.sellingType === 'WEIGHT' && !weightPayload) {
+      setWeightModalProduct(product);
+      return;
+    }
+
+    // Generate cartItemId: composite for weight items, product.id for piece items
+    const grams = weightPayload ? weightPayload.grams : null;
+    const cartItemId = generateCartItemId(product, grams);
+
     setCartItems((prevItems) => {
-      const existing = prevItems.find((item) => item.id === product.id);
-      if (existing) {
-        return prevItems.map((item) =>
-          item.id === product.id
+      const existingIndex = prevItems.findIndex(
+        (item) => (item.cartItemId || item.id) === cartItemId
+      );
+
+      if (existingIndex >= 0) {
+        const existing = prevItems[existingIndex];
+        // Respect stock limit if available
+        if (product.stock !== undefined && existing.quantity >= product.stock) {
+          return prevItems;
+        }
+        return prevItems.map((item, idx) =>
+          idx === existingIndex
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+
+      // New Weight-based line item
+      if (product.sellingType === 'WEIGHT' && weightPayload) {
+        return [
+          ...prevItems,
+          {
+            id: product.id,
+            cartItemId,
+            productId: product.id,
+            name: product.name,
+            sellingType: 'WEIGHT',
+            grams: weightPayload.grams,
+            displayWeight: weightPayload.displayWeight,
+            ratePerKg: weightPayload.ratePerKg,
+            purchaseRatePerKg: weightPayload.purchaseRatePerKg,
+            price: weightPayload.sellingAmountBeforeGst,
+            sellingAmountBeforeGst: weightPayload.sellingAmountBeforeGst,
+            gstRate: weightPayload.gstRate,
+            gstAmount: weightPayload.gstAmount,
+            customerAmount: weightPayload.customerAmount,
+            profitPerUnit: weightPayload.profit,
+            unit: weightPayload.displayWeight,
+            quantity: 1,
+            image: product.image,
+            stock: product.stock,
+          },
+        ];
+      }
+
+      // Standard Piece-based line item
       return [
         ...prevItems,
         {
           id: product.id,
+          cartItemId,
+          productId: product.id,
           name: product.name,
+          sellingType: 'PIECE',
           price: product.price,
           unit: product.unit,
           quantity: 1,
           image: product.image,
+          stock: product.stock,
+          gstRate: product.gstRate || 5,
+          sellingAmountBeforeGst: product.price,
         },
       ];
     });
   };
 
-  // Update Item Quantity
-  const handleUpdateQuantity = (productId, newQuantity) => {
+  // Update Item Quantity (by composite cartItemId)
+  const handleUpdateQuantity = (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
-      handleRemoveItem(productId);
+      handleRemoveItem(cartItemId);
     } else {
       setCartItems((prevItems) =>
         prevItems.map((item) =>
-          item.id === productId ? { ...item, quantity: newQuantity } : item
+          (item.cartItemId || item.id) === cartItemId
+            ? { ...item, quantity: newQuantity }
+            : item
         )
       );
     }
   };
 
-  // Remove Item from Cart
-  const handleRemoveItem = (productId) => {
+  // Remove Item from Cart (by composite cartItemId)
+  const handleRemoveItem = (cartItemId) => {
     setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id !== productId)
+      prevItems.filter((item) => (item.cartItemId || item.id) !== cartItemId)
     );
   };
 
@@ -135,14 +224,10 @@ export function PosBillingDashboard() {
   // Print Bill Flow
   const handleOpenPrintBill = (orderData) => {
     if (cartItems.length === 0) return;
-    const subTotal = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
+    const { subTotal, discountAmount, taxAmount, totalAmount } = calculateCartTotals(
+      cartItems,
+      discountPercent
     );
-    const discountAmount = Math.round((subTotal * (discountPercent || 0)) / 100);
-    const taxableAmount = Math.max(0, subTotal - discountAmount);
-    const taxAmount = Math.round(taxableAmount * 0.05);
-    const totalAmount = taxableAmount + taxAmount;
     const isPreOrder = orderData?.orderType === 'order';
 
     setLastCompletedBill({
@@ -165,14 +250,10 @@ export function PosBillingDashboard() {
 
   // Successful Payment Handling
   const handlePaymentSuccess = (paymentDetails) => {
-    const subTotal = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
+    const { subTotal, discountAmount, taxAmount, totalAmount } = calculateCartTotals(
+      cartItems,
+      discountPercent
     );
-    const discountAmount = Math.round((subTotal * (discountPercent || 0)) / 100);
-    const taxableAmount = Math.max(0, subTotal - discountAmount);
-    const taxAmount = Math.round(taxableAmount * 0.05);
-    const totalAmount = taxableAmount + taxAmount;
     const isPreOrder = currentOrderMeta?.orderType === 'order';
 
     const completed = {
@@ -207,7 +288,11 @@ export function PosBillingDashboard() {
         hour12: true,
       })}`,
       items: `${cartItems.length} items`,
-      itemsList: cartItems.map((it) => `${it.quantity}x ${it.name}`),
+      itemsList: cartItems.map((it) =>
+        it.sellingType === 'WEIGHT'
+          ? `${it.quantity}x ${it.name} (${it.displayWeight})`
+          : `${it.quantity}x ${it.name}`
+      ),
       detailedItems: cartItems.map((it) => ({ ...it })),
       subTotal,
       discountAmount,
@@ -303,15 +388,13 @@ export function PosBillingDashboard() {
   };
 
   // Cart total calculation for modal
-  const currentSubTotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const currentDiscountAmount = Math.round(
-    (currentSubTotal * (discountPercent || 0)) / 100
-  );
-  const currentTaxable = Math.max(0, currentSubTotal - currentDiscountAmount);
-  const currentTotalAmount = currentTaxable + Math.round(currentTaxable * 0.05);
+  const {
+    subTotal: currentSubTotal,
+    discountAmount: currentDiscountAmount,
+    taxableAmount: currentTaxable,
+    taxAmount: currentTaxAmount,
+    totalAmount: currentTotalAmount,
+  } = calculateCartTotals(cartItems, discountPercent);
 
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -433,6 +516,14 @@ export function PosBillingDashboard() {
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
         billData={lastCompletedBill}
+      />
+
+      {/* Weight Selection Modal */}
+      <WeightSelectionModal
+        isOpen={Boolean(weightModalProduct)}
+        onClose={() => setWeightModalProduct(null)}
+        product={weightModalProduct}
+        onConfirmWeight={(prod, payload) => handleAddToCart(prod, payload)}
       />
     </div>
   );

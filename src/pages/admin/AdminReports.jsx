@@ -29,6 +29,7 @@ import {
   ALL_ORDERS_DATA
 } from '../../data/adminMockData';
 import ReceiptModal from '../../components/ReceiptModal';
+import ProductDailyProfitReport from './reports/ProductDailyProfitReport';
 
 export const AdminReports = () => {
   const outletContext = useOutletContext();
@@ -36,7 +37,7 @@ export const AdminReports = () => {
   const setSelectedDateRange = outletContext?.setSelectedDateRange;
 
   const [toastMessage, setToastMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('Overview'); // 'Overview' | 'GST' | 'Profitability'
+  const [activeTab, setActiveTab] = useState('DailyProfit'); // 'DailyProfit' | 'Overview' | 'GST'
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [activeReceiptSlipOrder, setActiveReceiptSlipOrder] = useState(null);
   const [matrixViewMode, setMatrixViewMode] = useState('products'); // 'products' | 'bills'
@@ -552,8 +553,71 @@ export const AdminReports = () => {
         </div>
       )}
 
-      {/* Top Header & Export Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#4E3636]/15 shadow-soft">
+      {/* Report Sub-Tabs Navigation */}
+      <div className="bg-white p-2 rounded-2xl border border-[#4E3636]/15 shadow-soft flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('DailyProfit')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'DailyProfit'
+                ? 'bg-[#116D6E] text-white shadow-teal'
+                : 'text-[#4E3636] hover:bg-[#FDFBF7] hover:text-[#321E1E]'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Product Daily Profit</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'DailyProfit'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-[#116D6E]/10 text-[#116D6E]'
+              }`}
+            >
+              Unit Economics
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('Overview')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'Overview'
+                ? 'bg-[#116D6E] text-white shadow-teal'
+                : 'text-[#4E3636] hover:bg-[#FDFBF7] hover:text-[#321E1E]'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Financial Audit &amp; P&amp;L</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('GST')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'GST'
+                ? 'bg-[#116D6E] text-white shadow-teal'
+                : 'text-[#4E3636] hover:bg-[#FDFBF7] hover:text-[#321E1E]'
+            }`}
+          >
+            <Percent className="w-4 h-4" />
+            <span>GSTR-1 Tax Ledger</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-[#4E3636] px-3 font-medium hidden md:block">
+          Active Suite: <strong className="text-[#116D6E]">{activeTab === 'DailyProfit' ? 'Item Margin Audit' : activeTab === 'Overview' ? 'Comprehensive P&L' : 'Statutory Tax'}</strong>
+        </div>
+      </div>
+
+      {/* Tab 1: Product Daily Profit (New Feature) */}
+      {activeTab === 'DailyProfit' && <ProductDailyProfitReport />}
+
+      {/* Tab 2: Financial Overview & P&L */}
+      {activeTab === 'Overview' && (
+        <div className="space-y-6">
+          {/* Top Header & Export Actions */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-[#4E3636]/15 shadow-soft">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#116D6E]" />
@@ -1234,6 +1298,7 @@ export const AdminReports = () => {
           <div className="mt-4 pt-3 border-t border-[#4E3636]/10 flex flex-wrap items-center justify-between text-[11px] text-[#4E3636] gap-2">
             <span>Prepared according to Indian GST Composite and Regular Scheme</span>
             <button
+              type="button"
               onClick={handleDownloadGST}
               className="text-[#116D6E] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
@@ -1243,6 +1308,169 @@ export const AdminReports = () => {
           </div>
         </div>
       </div>
+    </div>
+  )}
+
+      {/* Tab 3: GSTR-1 Tax Ledger Only */}
+      {activeTab === 'GST' && (
+        <div className="space-y-6">
+          {/* Lower Section: Payment Tender Reconciliation & GSTR-1 Tax Ledger */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left (5 cols): Payment Tender Audit */}
+            <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-[#4E3636]/15 shadow-soft flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[#116D6E]" />
+                    <h3 className="font-serif text-lg font-bold text-[#321E1E]">
+                      Payment Tender Reconciliation
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    100% Audited
+                  </span>
+                </div>
+                <p className="text-xs text-[#4E3636] mb-4">
+                  Electronic UPI vs. Counter Cash vs. Card settlement distribution
+                </p>
+
+                {/* Total Reconciled Summary Box */}
+                <div className="p-4 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10 flex items-center justify-between mb-4">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#4E3636]">
+                      Total Reconciled Tender
+                    </span>
+                    <div className="text-2xl font-extrabold text-[#321E1E] mt-0.5">
+                      ₹2,54,200
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] font-semibold text-[#116D6E] bg-[#116D6E]/10 px-2.5 py-1 rounded-md">
+                      995 Transactions
+                    </span>
+                  </div>
+                </div>
+
+                {/* Proportional Segmented Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-[11px] text-[#4E3636] font-semibold mb-1.5">
+                    <span>Tender Split</span>
+                    <span>UPI {PAYMENT_TENDER_AUDIT[0]?.percentage} &bull; Cash {PAYMENT_TENDER_AUDIT[1]?.percentage}</span>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-[#4E3636]/10 flex overflow-hidden p-0.5 gap-0.5 bg-[#FDFBF7] border border-[#4E3636]/15">
+                    {PAYMENT_TENDER_AUDIT.map((item) => (
+                      <div
+                        key={item.method}
+                        style={{ width: item.percentage, backgroundColor: item.color }}
+                        className="h-full rounded-xs transition-all"
+                        title={`${item.method}: ${item.percentage}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Itemized Tender Rows */}
+                <div className="space-y-2.5 pt-2 border-t border-[#4E3636]/10 text-xs">
+                  {PAYMENT_TENDER_AUDIT.map((item) => (
+                    <div
+                      key={item.method}
+                      className="p-2.5 rounded-xl bg-[#FDFBF7]/60 border border-[#4E3636]/10 hover:border-[#116D6E]/30 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="font-semibold text-[#321E1E]">{item.method}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-[#321E1E]">
+                            ₹{item.amount.toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-[11px] text-[#4E3636] ml-1.5 font-bold">
+                            ({item.percentage})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right (7 cols): GSTR-1 Tax Liability Summary Ledger */}
+            <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-[#4E3636]/15 shadow-soft flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Percent className="w-4 h-4 text-[#CD1818]" />
+                    <h3 className="font-serif text-lg font-bold text-[#321E1E]">
+                      GSTR-1 Tax Liability Summary Ledger
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#CD1818]/10 text-[#CD1818] border border-[#CD1818]/20">
+                    GST Ready
+                  </span>
+                </div>
+                <p className="text-xs text-[#4E3636] mb-4">
+                  Slab-wise taxable turnover and CGST/SGST collected for government tax filing
+                </p>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#4E3636]/10 bg-[#FDFBF7] text-[#4E3636]">
+                        <th className="py-2.5 px-3 font-bold uppercase tracking-wider">GST Slab</th>
+                        <th className="py-2.5 px-2 font-bold uppercase tracking-wider">HSN</th>
+                        <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-right">Taxable Sales</th>
+                        <th className="py-2.5 px-2.5 font-bold uppercase tracking-wider text-right">CGST</th>
+                        <th className="py-2.5 px-2.5 font-bold uppercase tracking-wider text-right">SGST</th>
+                        <th className="py-2.5 px-3 font-bold uppercase tracking-wider text-right">Total Tax</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#4E3636]/10">
+                      {GST_SLAB_AUDIT_DATA.map((row) => (
+                        <tr key={row.slab} className="hover:bg-[#FDFBF7]/60">
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-[#321E1E] block">{row.slab}</span>
+                            <span className="text-[10px] text-[#4E3636] block line-clamp-1">{row.description}</span>
+                          </td>
+                          <td className="py-3 px-2 font-mono text-[11px] text-[#4E3636]">{row.hsn}</td>
+                          <td className="py-3 px-3 text-right font-semibold text-[#321E1E]">
+                            ₹{row.taxableValue.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-2.5 text-right text-[#4E3636]">
+                            ₹{row.cgst.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-2.5 text-right text-[#4E3636]">
+                            ₹{row.sgst.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-3 text-right font-bold text-[#CD1818]">
+                            ₹{row.totalTax.toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-[#4E3636]/10 flex flex-wrap items-center justify-between text-[11px] text-[#4E3636] gap-2">
+                <span>Prepared according to Indian GST Composite and Regular Scheme</span>
+                <button
+                  type="button"
+                  onClick={handleDownloadGST}
+                  className="text-[#116D6E] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Export GSTR-1 File (CSV)</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Official Receipt Slip Modal (80mm Thermal Slip Preview & Print/Download) */}
       {activeReceiptSlipOrder && (

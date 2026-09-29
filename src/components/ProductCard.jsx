@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Plus, Check, Star } from 'lucide-react';
+import { Plus, Check, Scale } from 'lucide-react';
 
 export const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const isWeightProduct = product.sellingType === 'WEIGHT';
 
   const handleAdd = (e) => {
     e.stopPropagation();
     onAddToCart(product);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 600);
+    if (!isWeightProduct) {
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 600);
+    }
   };
 
   return (
@@ -32,8 +35,15 @@ export const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
         />
 
         {/* Unit badge / Tag */}
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-semibold text-[#4E3636] shadow-xs">
-          {product.unit}
+        <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-semibold text-[#4E3636] shadow-xs">
+          {isWeightProduct ? (
+            <>
+              <Scale className="w-3 h-3 text-[#116D6E]" />
+              <span>By Weight</span>
+            </>
+          ) : (
+            <span>{product.unit}</span>
+          )}
         </div>
 
         {/* Cart Quantity Badge if item already in cart */}
@@ -56,6 +66,9 @@ export const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
         <div className="mt-2 flex items-baseline justify-between">
           <div className="text-base font-semibold text-[#4E3636]">
             ₹{product.price.toLocaleString('en-IN')}
+            {isWeightProduct && (
+              <span className="text-xs font-normal text-[#4E3636]/70 ml-1">/ kg</span>
+            )}
           </div>
           <span className="text-[11px] text-[#4E3636]/60">
             {product.category}
@@ -63,18 +76,24 @@ export const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
         </div>
       </div>
 
-      {/* "Add" Button: Full width, outline button. Border and text color #116D6E.
-          On hover: fill with #116D6E and text turns white. */}
+      {/* "Add" / "Select Weight" Button */}
       <button
         type="button"
         onClick={handleAdd}
-        className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border border-[#116D6E] transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
-          justAdded
-            ? 'bg-[#116D6E] text-white'
-            : 'text-[#116D6E] hover:bg-[#116D6E] hover:text-white'
+        className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+          isWeightProduct
+            ? 'bg-[#116D6E]/10 hover:bg-[#116D6E] text-[#116D6E] hover:text-white border-[#116D6E]/30 hover:border-[#116D6E]'
+            : justAdded
+            ? 'bg-[#116D6E] text-white border-[#116D6E]'
+            : 'text-[#116D6E] hover:bg-[#116D6E] hover:text-white border-[#116D6E]'
         }`}
       >
-        {justAdded ? (
+        {isWeightProduct ? (
+          <>
+            <Scale className="w-3.5 h-3.5" />
+            <span>Select Weight</span>
+          </>
+        ) : justAdded ? (
           <>
             <Check className="w-3.5 h-3.5" />
             <span>Added!</span>
@@ -91,3 +110,4 @@ export const ProductCard = ({ product, onAddToCart, cartQuantity = 0 }) => {
 };
 
 export default ProductCard;
+

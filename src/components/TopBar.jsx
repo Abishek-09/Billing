@@ -28,12 +28,16 @@ export const TopBar = ({
   onOpenMobileCart,
   cartItemsCount = 0,
   onSelectCategory,
+  onAddToCart,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const dropdownRef = useRef(null);
   const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const itemRefs = useRef([]);
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
 
@@ -80,6 +84,75 @@ export const TopBar = ({
     } catch (e) {}
   };
 
+  // Popular bakery searches
+  const POPULAR_SEARCHES = ['Croissant', 'Sourdough', 'Tart', 'Baguette', 'Cheesecake', 'Flat White'];
+
+  // Live product search suggestions with barcode, ID, and text matching
+  const liveSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return PRODUCTS.filter((p) => {
+      const matchesId = p.id.toLowerCase() === q;
+      const matchesBarcode = p.barcode ? p.barcode.toLowerCase() === q : false;
+      const matchesName = p.name.toLowerCase().includes(q);
+      const matchesCategory = p.category.toLowerCase().includes(q);
+      const matchesDesc = p.description?.toLowerCase().includes(q);
+      return matchesId || matchesBarcode || matchesName || matchesCategory || matchesDesc;
+    }).slice(0, 8);
+  }, [searchQuery]);
+
+  // Reset selectedIndex whenever search query or liveSuggestions change
+  useEffect(() => {
+    setSelectedIndex(liveSuggestions.length > 0 ? 0 : -1);
+  }, [searchQuery, liveSuggestions.length]);
+
+  // Auto-scroll highlighted suggestion into view
+  useEffect(() => {
+    if (selectedIndex >= 0 && itemRefs.current[selectedIndex]) {
+      itemRefs.current[selectedIndex].scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    }
+  }, [selectedIndex]);
+
+  // Global shortcut (Ctrl+K or Cmd+K) to focus search
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchDropdownOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Shared Add to Bill execution for both Click and Enter
+  const handleSelectProduct = (product) => {
+    if (!product) return;
+
+    // Out of stock guard
+    if (product.stock !== undefined && product.stock <= 0) {
+      return;
+    }
+
+    if (onAddToCart) {
+      onAddToCart(product);
+    }
+
+    saveSearchTerm(product.name);
+    setSearchQuery('');
+    setSearchDropdownOpen(false);
+    setSelectedIndex(-1);
+
+    // Keep focus on input for continuous scanning or keyboard entry
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 10);
+  };
+
   const handleSelectSearch = (term) => {
     setSearchQuery(term);
     saveSearchTerm(term);
@@ -88,30 +161,32 @@ export const TopBar = ({
   };
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      if (searchQuery.trim()) {
-        saveSearchTerm(searchQuery);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (liveSuggestions.length === 0) return;
+      setSearchDropdownOpen(true);
+      setSelectedIndex((prev) => (prev + 1) % liveSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (liveSuggestions.length === 0) return;
+      setSearchDropdownOpen(true);
+      setSelectedIndex((prev) => (prev <= 0 ? liveSuggestions.length - 1 : prev - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent accidental form submit or page reload
+      if (!searchQuery.trim() || liveSuggestions.length === 0) {
+        return; // Empty search or no results: do nothing safely
       }
-      setSearchDropdownOpen(false);
+      const targetIndex = selectedIndex >= 0 && selectedIndex < liveSuggestions.length ? selectedIndex : 0;
+      const targetProduct = liveSuggestions[targetIndex];
+      if (targetProduct) {
+        handleSelectProduct(targetProduct);
+      }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       setSearchDropdownOpen(false);
+      setSelectedIndex(-1);
     }
   };
-
-  // Popular bakery searches
-  const POPULAR_SEARCHES = ['Croissant', 'Sourdough', 'Tart', 'Baguette', 'Cheesecake', 'Flat White'];
-
-  // Live product search suggestions
-  const liveSuggestions = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return [];
-    return PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
-    ).slice(0, 5);
-  }, [searchQuery]);
 
   // Similar searches / Fuzzy suggestions
   const similarSearches = useMemo(() => {
@@ -188,8 +263,18 @@ export const TopBar = ({
       <div className="relative flex-1 max-w-lg min-w-0" ref={searchContainerRef}>
         <Search className="w-4 h-4 text-[#4E3636] absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
+          ref={searchInputRef}
           type="text"
           value={searchQuery}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={searchDropdownOpen && liveSuggestions.length > 0}
+          aria-controls="pos-search-suggestions-list"
+          aria-activedescendant={
+            selectedIndex >= 0 && liveSuggestions[selectedIndex]
+              ? `suggestion-${liveSuggestions[selectedIndex].id}`
+              : undefined
+          }
           onChange={(e) => {
             setSearchQuery(e.target.value);
             setSearchDropdownOpen(true);
@@ -267,39 +352,83 @@ export const TopBar = ({
                     <span>Search Suggestions</span>
                   </div>
                   <span className="text-[10px] text-[#4E3636]/60 font-medium">
-                    {liveSuggestions.length} found
+                    {liveSuggestions.length} found &bull; Use &uarr;&darr; + Enter
                   </span>
                 </div>
 
                 {liveSuggestions.length > 0 ? (
-                  <div className="space-y-1">
-                    {liveSuggestions.map((prod) => (
-                      <div
-                        key={prod.id}
-                        onClick={() => handleSelectSearch(prod.name)}
-                        className="flex items-center justify-between p-2 rounded-xl hover:bg-[#FDFBF7] transition-colors cursor-pointer group border border-transparent hover:border-[#4E3636]/10"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <img
-                            src={prod.image}
-                            alt={prod.name}
-                            className="w-8 h-8 rounded-lg object-cover border border-[#4E3636]/10 shrink-0"
-                          />
-                          <div>
-                            <div className="text-xs font-bold text-[#321E1E] group-hover:text-[#116D6E] transition-colors">
-                              {prod.name}
-                            </div>
-                            <div className="text-[10px] text-[#4E3636]/70 flex items-center gap-1.5">
-                              <span>{prod.category}</span>
-                              <span>&bull;</span>
-                              <span className="font-semibold text-[#116D6E]">₹{prod.price}</span>
+                  <div
+                    id="pos-search-suggestions-list"
+                    role="listbox"
+                    aria-label="Product suggestions"
+                    className="space-y-1"
+                  >
+                    {liveSuggestions.map((prod, index) => {
+                      const isSelected = index === selectedIndex;
+                      const isOutOfStock = prod.stock !== undefined && prod.stock <= 0;
+
+                      return (
+                        <div
+                          key={prod.id}
+                          id={`suggestion-${prod.id}`}
+                          role="option"
+                          aria-selected={isSelected}
+                          ref={(el) => (itemRefs.current[index] = el)}
+                          onMouseEnter={() => setSelectedIndex(index)}
+                          onClick={() => !isOutOfStock && handleSelectProduct(prod)}
+                          className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer border ${
+                            isSelected
+                              ? 'bg-[#116D6E]/10 border-[#116D6E]/40 ring-1 ring-[#116D6E]/20 text-[#116D6E] shadow-xs'
+                              : 'hover:bg-[#FDFBF7] border-transparent text-[#321E1E] hover:border-[#4E3636]/10'
+                          } ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={prod.image}
+                              alt={prod.name}
+                              className="w-8 h-8 rounded-lg object-cover border border-[#4E3636]/10 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div
+                                className={`text-xs font-bold truncate ${
+                                  isSelected ? 'text-[#116D6E]' : 'text-[#321E1E]'
+                                }`}
+                              >
+                                {prod.name}
+                              </div>
+                              <div className="text-[10px] text-[#4E3636]/70 flex items-center gap-1.5">
+                                <span>{prod.category}</span>
+                                <span>&bull;</span>
+                                <span className="font-semibold text-[#116D6E]">
+                                  ₹{prod.sellingPrice || prod.price}{prod.sellingType === 'WEIGHT' ? ' / kg' : ''}
+                                </span>
+                                {prod.sellingType === 'WEIGHT' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#116D6E]/10 text-[#116D6E]">
+                                    By Weight
+                                  </span>
+                                )}
+                                {isOutOfStock && (
+                                  <>
+                                    <span>&bull;</span>
+                                    <span className="text-[#CD1818] font-semibold">Out of Stock</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <CornerDownLeft className="w-3.5 h-3.5 text-[#4E3636]/30 group-hover:text-[#116D6E] transition-colors" />
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isSelected ? (
+                              <span className="text-[10px] font-semibold bg-[#116D6E] text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs animate-in fade-in duration-100">
+                                {prod.sellingType === 'WEIGHT' ? '↵ Enter to weigh' : '↵ Enter to add'}
+                              </span>
+                            ) : (
+                              <CornerDownLeft className="w-3.5 h-3.5 text-[#4E3636]/30" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="p-2.5 text-center text-xs text-[#4E3636]/70 bg-[#FDFBF7] rounded-xl border border-[#4E3636]/10">

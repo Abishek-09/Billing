@@ -190,16 +190,31 @@ export const ReceiptModal = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#4E3636]/10">
-                {items.map((item, idx) => (
-                  <tr key={idx} className="py-1">
-                    <td className="py-1.5 pr-1 font-medium">{item.name}</td>
-                    <td className="py-1.5 text-center text-[#4E3636]">{item.quantity}</td>
-                    <td className="py-1.5 text-right text-[#4E3636]">₹{item.price}</td>
-                    <td className="py-1.5 text-right font-bold text-[#321E1E]">
-                      ₹{item.price * item.quantity}
-                    </td>
-                  </tr>
-                ))}
+                {items.map((item, idx) => {
+                  const isWeight = item.sellingType === 'WEIGHT';
+                  const unitRate = item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price;
+                  const lineAmt = unitRate * item.quantity;
+
+                  return (
+                    <tr key={idx} className="py-1">
+                      <td className="py-1.5 pr-1 font-medium">
+                        <div>{item.name}</div>
+                        {isWeight && item.displayWeight && (
+                          <div className="text-[10px] text-[#4E3636]/70 font-normal">
+                            {item.displayWeight} @ ₹{item.ratePerKg}/kg
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-center text-[#4E3636]">{item.quantity}</td>
+                      <td className="py-1.5 text-right text-[#4E3636]">
+                        ₹{Number(unitRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-1.5 text-right font-bold text-[#321E1E]">
+                        ₹{Number(lineAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
@@ -209,21 +224,21 @@ export const ReceiptModal = ({
             <div className="space-y-1 text-right text-[11px] text-[#4E3636]">
               <div className="flex justify-between">
                 <span>Sub Total:</span>
-                <span>₹{subTotal.toLocaleString('en-IN')}</span>
+                <span>₹{Number(subTotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-700">
                   <span>Discount ({discountPercent}%):</span>
-                  <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
+                  <span>-₹{Number(discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span>GST (5%):</span>
-                <span>+₹{taxAmount.toLocaleString('en-IN')}</span>
+                <span>GST / Tax:</span>
+                <span>+₹{Number(taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between font-bold text-sm text-[#CD1818] pt-1 border-t border-[#4E3636]/20">
                 <span className="text-[#321E1E]">GRAND TOTAL:</span>
-                <span>₹{totalAmount.toLocaleString('en-IN')}</span>
+                <span>₹{Number(totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               {billData.orderType && (
                 <div className="flex justify-between text-[10px] text-[#4E3636] pt-1">

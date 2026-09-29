@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { CUSTOMERS } from '../data/mockData';
+import { round2 } from '../services/weightCalculationService';
 
 export const BillingCart = ({
   cartItems,
@@ -57,16 +58,25 @@ export const BillingCart = ({
     };
   }, []);
 
-  // Live Calculations
-  const subTotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
+  // Live Calculations (Dual-mode: PIECE & WEIGHT products)
+  const subTotal = round2(
+    cartItems.reduce(
+      (sum, item) => sum + (item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price) * item.quantity,
+      0
+    )
   );
-  const discountAmount = Math.round((subTotal * (discountPercent || 0)) / 100);
+  const discountAmount = round2((subTotal * (discountPercent || 0)) / 100);
   const taxableAmount = Math.max(0, subTotal - discountAmount);
-  const taxRate = 0.05; // 5%
-  const taxAmount = Math.round(taxableAmount * taxRate);
-  const totalAmount = taxableAmount + taxAmount;
+  const taxAmount = round2(
+    cartItems.reduce((sum, item) => {
+      const itemPre = (item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price) * item.quantity;
+      const itemDisc = discountPercent > 0 ? (itemPre * discountPercent) / 100 : 0;
+      const itemTaxable = Math.max(0, itemPre - itemDisc);
+      const rate = (item.gstRate !== undefined ? item.gstRate : 5) / 100;
+      return sum + (itemTaxable * rate);
+    }, 0)
+  );
+  const totalAmount = round2(taxableAmount + taxAmount);
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Order Type & Conditional Advance Payment calculations
@@ -301,67 +311,94 @@ export const BillingCart = ({
       {/* 3. Itemized List */}
       <div className="flex-1 overflow-y-auto px-5 py-3 divide-y divide-[#4E3636]/10">
         {cartItems.length > 0 ? (
-          cartItems.map((item) => (
-            <div
-              key={item.id}
-              className="py-3 flex items-center justify-between gap-3 group"
-            >
-              {/* Thumbnail */}
-              <img
-                src={item.image}
-                alt={item.name}
-                onError={(e) => {
-                  e.target.src = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80';
-                }}
-                className="w-11 h-11 rounded-lg object-cover border border-[#4E3636]/10 shrink-0 bg-[#FDFBF7]"
-              />
+          cartItems.map((item) => {
+            const itemKey = item.cartItemId || item.id;
+            const isWeight = item.sellingType === 'WEIGHT';
+            const linePreGst = (item.sellingAmountBeforeGst !== undefined ? item.sellingAmountBeforeGst : item.price) * item.quantity;
+            const lineTotalWithTax = isWeight && item.customerAmount
+              ? item.customerAmount * item.quantity
+              : linePreGst * 1.05;
 
-              {/* Title & Subtext */}
-              <div className="flex-1 min-w-0 text-left">
-                <h4 className="text-xs font-bold text-[#321E1E] truncate" title={item.name}>
-                  {item.name}
-                </h4>
-                <div className="text-[11px] text-[#4E3636] mt-0.5 flex items-center gap-1.5">
-                  <span>₹{item.price} each</span>
-                  <span className="text-[#4E3636]/40">&bull;</span>
-                  <span className="font-semibold text-[#321E1E]">
-                    ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Minimalist Quantity selector with + and - buttons */}
-              <div className="flex items-center gap-1.5 bg-[#FDFBF7] px-2 py-1 rounded-lg border border-[#4E3636]/15 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                  className="w-5 h-5 rounded flex items-center justify-center text-[#4E3636] hover:bg-white hover:text-[#321E1E] transition-colors"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="text-xs font-bold text-[#321E1E] w-5 text-center">
-                  {item.quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                  className="w-5 h-5 rounded flex items-center justify-center text-[#4E3636] hover:bg-white hover:text-[#321E1E] transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* Delete icon: #CD1818 on hover */}
-              <button
-                type="button"
-                onClick={() => onRemoveItem(item.id)}
-                className="p-1 text-[#4E3636]/40 hover:text-[#CD1818] transition-colors rounded hover:bg-[#CD1818]/5 shrink-0 cursor-pointer"
-                title="Remove item"
+            return (
+              <div
+                key={itemKey}
+                className="py-3 flex items-center justify-between gap-3 group"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))
+                {/* Thumbnail */}
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80';
+                  }}
+                  className="w-11 h-11 rounded-lg object-cover border border-[#4E3636]/10 shrink-0 bg-[#FDFBF7]"
+                />
+
+                {/* Title & Subtext */}
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className="text-xs font-bold text-[#321E1E] truncate max-w-[160px]" title={item.name}>
+                      {item.name}
+                    </h4>
+                    {isWeight && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-[#116D6E]/10 text-[#116D6E] font-bold text-[10px] shrink-0 border border-[#116D6E]/20">
+                        {item.displayWeight}
+                      </span>
+                    )}
+                  </div>
+
+                  {isWeight ? (
+                    <div className="text-[11px] text-[#4E3636] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>₹{item.ratePerKg}/kg</span>
+                      <span className="text-[#4E3636]/40">&bull;</span>
+                      <span className="font-semibold text-[#321E1E]">
+                        ₹{linePreGst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-[#4E3636] mt-0.5 flex items-center gap-1.5">
+                      <span>₹{item.price} each</span>
+                      <span className="text-[#4E3636]/40">&bull;</span>
+                      <span className="font-semibold text-[#321E1E]">
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Minimalist Quantity selector with + and - buttons */}
+                <div className="flex items-center gap-1.5 bg-[#FDFBF7] px-2 py-1 rounded-lg border border-[#4E3636]/15 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateQuantity(itemKey, item.quantity - 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-[#4E3636] hover:bg-white hover:text-[#321E1E] transition-colors cursor-pointer"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="text-xs font-bold text-[#321E1E] w-5 text-center">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateQuantity(itemKey, item.quantity + 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-[#4E3636] hover:bg-white hover:text-[#321E1E] transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Delete icon: #CD1818 on hover */}
+                <button
+                  type="button"
+                  onClick={() => onRemoveItem(itemKey)}
+                  className="p-1 text-[#4E3636]/40 hover:text-[#CD1818] transition-colors rounded hover:bg-[#CD1818]/5 shrink-0 cursor-pointer"
+                  title="Remove item"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })
         ) : (
           <div className="h-48 flex flex-col items-center justify-center text-center p-6 text-[#4E3636]/60">
             <ShoppingBag className="w-10 h-10 text-[#4E3636]/30 mb-2 stroke-[1.5]" />
@@ -380,7 +417,7 @@ export const BillingCart = ({
           <div className="flex items-center justify-between text-[#4E3636]">
             <span>Sub Total</span>
             <span className="font-semibold text-[#321E1E]">
-              ₹{subTotal.toLocaleString('en-IN')}
+              ₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
@@ -409,15 +446,15 @@ export const BillingCart = ({
                 </span>
               </div>
               <span className="font-semibold text-emerald-700 min-w-14 text-right">
-                -₹{discountAmount.toLocaleString('en-IN')}
+                -₹{discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>
 
           <div className="flex items-center justify-between text-[#4E3636]">
-            <span>GST / Tax (5%)</span>
+            <span>GST / Tax</span>
             <span className="font-semibold text-[#321E1E]">
-              +₹{taxAmount.toLocaleString('en-IN')}
+              +₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -469,7 +506,7 @@ export const BillingCart = ({
             Total Amount
           </span>
           <span className="text-3xl font-extrabold text-[#CD1818] tracking-tight">
-            ₹{totalAmount.toLocaleString('en-IN')}
+            ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
 
@@ -534,7 +571,7 @@ export const BillingCart = ({
               className="w-full py-3.5 px-4 rounded-xl bg-[#CD1818] hover:bg-[#b51414] active:scale-[0.99] text-white text-base font-bold flex items-center justify-center gap-2 shadow-[0_8px_24px_-4px_rgba(205,24,24,0.45)] hover:shadow-[0_12px_28px_-4px_rgba(205,24,24,0.55)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
             >
               <CreditCard className="w-5 h-5 text-white" />
-              <span>Pay Now &bull; ₹{totalAmount.toLocaleString('en-IN')}</span>
+              <span>Pay Now &bull; ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </button>
           )}
 

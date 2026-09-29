@@ -45,6 +45,7 @@ export const ProductCatalog = ({
         onOpenMobileCart={onOpenMobileCart}
         cartItemsCount={totalCartCount}
         onSelectCategory={onSelectCategory}
+        onAddToCart={onAddToCart}
       />
 
       {/* Main Content Area */}
